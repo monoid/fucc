@@ -1,0 +1,8 @@
+-*- mode: outline; -*-
+
+* Table-driven LR-parser
+
+Table driven LR-parser is implemented as FUCC:PARSER-LR.  Input
+arguments are lexer function, initial state of lexer and parser table.
+
+;;; LocalWords:  FUCC

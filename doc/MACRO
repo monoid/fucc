@@ -1,0 +1,132 @@
+-*- mode: outline; -*-
+
+Macro FUCC:DEFPARSER variable initial (&rest terminals) (&rest rules)
+                     &key prec-info
+                          (type :lalr)
+                          lexer-options
+
+Defines parser who's data is stored in VARIABLE that is declared
+special with DEFPARAMETER.  INITIAL is symbol: initial nonterminal.
+TERMINALS is list of terminals that parser can accept.  Other symbols
+are treated as nonterminals.  RULES is list of rules in arbitrary order.
+
+Each rule in RULES list is list.  First element is non-terminal
+(symbol that is member of TERMINALS list), second is
+action-description list (see below) and other elements (if any)
+are right side of the rule.
+
+RULE := (SYMBOL ACTION-DESCRIPTION &rest VAR-DESIGNATOR*)
+
+ACTION-DESCRIPTION := (:action FUNCTION)
+                   |  (:class CLASS)
+                   |  (:form LIST-OF-FORMS)
+
+VAL-DESIGNATOR := (:var SYMBOL RULE-EXP)
+               |  (:initarg SYMBOL RULE-EXP)
+               |  RULE-EXP
+
+RULE-EXP       := (CL:* RULE-EXP)
+               |  (CL:+ RULE-EXP)
+               |  (:MAYBE RULE-EXP)
+               |  (:LIST RULE-EXP RULE-EXP)
+               |  SYMBOL
+
+It describes action performed when the rule is reduced.
+
+FUNCTION here is a form that evaluates to function designator.  For
+example:
+
+  #'(lambda (a b) (cons a b))
+  (lambda (x) (process x))
+  #'identity
+  (constantly "Mary had a little lamb")
+
+During reduction semantic values of right side are passed as arguments
+to the FUNCTION value.  Value of the expression is semantic value of
+reduced nonterminal.
+
+CLASS is symbol that denotes class name.  You must not quote it.
+
+LIST-OF-FORMS is list of forms.
+
+:ACTION-form is basic form.  :CLASS-form and :FORM-form are converted
+to it internally.
+
+:CLASS-form creates object of class CLASS, who's initargs are defined
+with :INITARG VAL-DESIGNATORs.  You can use :INITARG VAL-DESIGNATORs
+only with :CLASS-form.
+
+:FORM evaluates form with variables who's names are
+symbols in :VAR VAL-DESIGNATORs bound in lexical context with values
+of semantic values of corresponding RULE-EXP.  You can use :VAR
+VAL-DESIGNATORs only with :FORM-form.
+
+Rules can be more complex than list of terminals/nonterminals: it can
+contain repetition operators like +, *, :LIST and :MAYBE for optional
+items.
+
+Rule expression (CL:* RULE-EXP) returns list of RULE-EXP as semantic
+value.  It matches 0 or more repetitions of RULE-EXP.
+
+Rule expression (CL:+ RULE-EXP) is similar to CL:*, but minimal number
+of elements is 1.
+
+(:MAYBE RULE-EXP) defines optional elements.  If RULE-EXP doesn't
+match, NIL is returned as semantic value, otherwise semantic value of
+RULE-EXP is used.
+
+(:LIST RULE-EXP1 RULE-EXP2) finds non-empty list of RULE-EXP1
+delimited by RULE-EXP2.  Semantic values aof RULE-EXP1 and RULE-EXP2
+are in same list.  For example:
+
+  (SEQ (...)
+       (:LIST OPERATOR SEMICOLON))
+
+is equivalent to:
+
+  (SEQ (...)
+       OPERATOR)
+  (SEQ (...)
+       OPERATOR SEMICOLON OPERATOR)
+  (SEQ (...)
+       OPERATOR SEMICOLON OPERATOR SEMICOLON OPERATOR)
+  ... #| and so on |#
+
+Note that
+  (SEQ2 (...)
+       (:LIST OPERATOR SEMICOLON) SEMICOLON)
+
+equals to
+  (SEQ2 (...)
+       OPERATOR SEMICOLON)
+  (SEQ2 (...)
+       OPERATOR SEMICOLON OPERATOR SEMICOLON)
+  (SEQ2 (...)
+       OPERATOR SEMICOLON OPERATOR SEMICOLON OPERATOR SEMICOLON)
+  ... #| and so on |#
+
+Such expression must be used with caution: they can introduce
+conflicts.
+
+Keywords:
+
+* :PREC-INFO
+
+Precedence info.  Argument is list of prec-lists.  Each prec-list
+start with one of keywords: :LEFT, :RIGHT or :NONE for
+left-associative, right-associative or non-associative operator.
+Rest of elements are terminals and nonterminals.
+
+Order of prec-lists defines their priority: tokens with least priority
+first.
+
+* :TYPE
+
+Parser type: :LALR (default), :LR (aka :LR1), :LR0, :SLR.
+
+* :LEXER-OPTIONS
+
+List of options.  Currently only one option is available: :CONTEXT.
+So, value is either empty list (default) or '(:CONTEXT).
+
+;; LocalWords:  LALR

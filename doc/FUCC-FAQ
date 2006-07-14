@@ -1,0 +1,31 @@
+-*- mode: outline; -*-
+
+1. What is FUCC?
+2. What does the name mean?
+2a. What is FU?
+4. Do you plan implementing other parsing algorithms?
+
+
+1. What is FUCC?
+
+   FUCC is a parser generator and parser for Common Lisp.
+
+
+2. What does the name mean?
+
+   FUCC is a FU Compiler Compiler.
+
+
+2a. What is FU?
+
+   Deliberately nothing.
+
+
+3. Do you plan implementing other parsing algorithms?
+
+   Yes, I plan to add GLR and LL parsing.  Early, CYK and other
+   parsers too.
+
+   Then FUCC will be universal parser toolkit for Common Lisp.
+
+;;; LocalWords:  FUCC LLGPL

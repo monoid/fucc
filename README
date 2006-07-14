@@ -1,0 +1,13 @@
+-*- mode: outline; -*-
+* What's FUCC
+
+FUCC is FU Compiler Compiler.  FUCC converts LALR(1) or LR(1)
+context-free grammar into Common Lisp program that parses input with
+actions.
+
+FUCC consists of two parts: generator and parser.  Generator is used
+for generating parsing tables.  Parser uses the tables for parsing an
+input.  If your grammar is fixed, you need generator for compilation only
+and don't need to distribute it.
+
+See files in doc directory, especially doc/FUCC-FAQ.

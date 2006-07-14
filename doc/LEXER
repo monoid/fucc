@@ -1,0 +1,10 @@
+-*- mode: outline; -*-
+
+* Lexer
+
+Lexer is a function with zero or one argument (if LEXER-OPTION of
+DEFPARSER contains :CONTEXT) that returns two values: token id as
+symbol and semantic information (any Lisp object).  NIL as token id is
+sign of end of input stream, its semantic value is ignored.
+
+;; LocalWords:  fixnum

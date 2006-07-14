@@ -1,0 +1,29 @@
+-*- mode: outline; -*-
+
+* Generic implementation of CLOSURE and GOTO
+
+Different flavors (LR(0), LR(1)) of CLOSURE and GOTO has common
+structure.  Thus generic implementation of these function are
+provided.  Custom versions pass custom closures to create specific
+result.
+
+** CLOSURE set proceed expand ordering
+
+LRPOINT in this section may be type other than
+FUCC-GENERATOR::LRPOINT, though current implementation uses only
+latter.
+
+SET is a list of LRPOINTs.
+
+PROCEED is a function of one argument -- LRPOINT -- that creates list
+of possible new elements in compressed form (for example, LR(0)
+version returns list of nonterminals).  The object must be
+comparable with EQUAL.
+
+EXPAND is a function of one argument that expands (uncompresses)
+objects returned by PROCEED.  For example, LR(0) version for every
+nonterminal returns list of LRPOINTs with rules of the nonterminal.
+
+ORDERING is function to order LRPOINTs.
+
+;;; LocalWords:  FUCC LRPOINT LRPOINTs

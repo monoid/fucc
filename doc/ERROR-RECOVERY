@@ -1,0 +1,58 @@
+-*- mode: outline; -*-
+
+* Error recovery
+
+FUCC signals about different problems (input errors, shift/reduce or
+reduce/reduce conflicts).  You can continue parsing with different
+restarts.  See Common Lisp HyperSpec, 9.1 Conditions.
+
+** Condition
+
+*** FUCC:PARSE-ERROR-CONDITION
+Parsing error.
+
+**** Readers
+FUCC:ERROR-TOKEN-ID
+FUCC:ERROR-DATA
+FUCC:ERROR-CONFIG
+
+Token ID and data received from lexer, and parser configuration.
+
+**** Restarts
+FUCC:SKIP-TOKEN
+  Get next token from lexer.
+
+FUCC:USE-TOKEN token data
+  Use the TOKEN (symbol, including NIL as end of stream) and DATA
+  (semantics) instead of old one.
+
+FUCC:INSERT-TOKEN token data
+  Insert TOKEN and DATA into stream: process TOKEN and DATA, then
+  process old token.
+
+  Perhaps, this restart will be removed in favor of
+  FUCC:INSERT-TOKEN-LIST.
+
+FUCC:INSERT-TOKEN-LIST list
+  Insert list of tokens into stream, process them, then process old
+  token.
+
+  List consists of cons pairs (TOKEN . DATA).
+
+
+*** FUCC:PARSE-CONFLICT-CONDITION
+Shift/reduce or reduce/reduce conflict.  Reader FUCC:POSSIBLE-ACTIONS
+returns list of conflicting actions.
+
+This is subtype of FUCC:PARSE-ERROR-CONDITION.
+
+**** Readers
+FUCC:POSSIBLE-ACTIONS
+  List of conflicting actions.
+
+**** Restarts
+FUCC:USE-ACTION action
+  Use action for recovery.  Action can be selected from list of
+  conflicting action or something else.
+
+;;; LocalWords:  FUCC HyperSpec

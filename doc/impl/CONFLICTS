@@ -1,0 +1,17 @@
+-*- mode: outline; -*-
+
+* Conflict resolution
+
+Precedence rules define poset PREC (partially ordered set) on actions.
+With addition rules like "otherwise shift over reduction" and "reduce
+rule which is defined first" make it ordered set RPREC.
+
+** Conflict resolution in GLR
+
+This issue is not quite clear to me.  GNU Bison splits parser on
+unresolved conflicts; but it also "resolves all the outstanding
+actions either by precedences given to the grammar rules involved".
+
+Perhaps, using all maximal elements of the poset PREC would be enough.
+
+;;; LocalWords:  poset
