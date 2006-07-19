@@ -73,7 +73,7 @@ environment.  If found, return it; otherwise create new object."
   (loop :for rule :in (grammar-rules grammar) :do
         (if (and (slot-boundp rule 'priority)
                  (symbolp (prec-priority rule)))
-            (let ((term (nterm-by-name (prec-priority rule))))
+            (let ((term (nterm-by-name (prec-priority rule) grammar)))
               (setf (prec-assoc rule)    (prec-assoc term)
                     (prec-priority rule) (prec-priority term)))
             (let ((last-term (find-if #'term-p (rule-right rule)
