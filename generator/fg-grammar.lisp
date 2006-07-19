@@ -167,8 +167,11 @@ environment.  If found, return it; otherwise create new object."
       (t
        (error "Can't happen: checked earlier.")))))
 
+(defparameter +complex-forms+
+  '(:* * :+ + :maybe :list))
 
-(defun parse-complex-form (form rule pos)
+(defun expand-complex-form (form rule pos)
+  (declare (ignore rule pos))
   (let ((generated-rules ())
         (generated-sym1 (gensym)))
     (ecase (first form)
@@ -190,26 +193,6 @@ environment.  If found, return it; otherwise create new object."
                ,@(rest form))
              generated-rules)
        (values generated-sym1 generated-rules 'common-lisp:reverse))
-      ((:or or)
-       (let* ((rule-left (first rule))
-              (rule-action (second rule))
-              (rule-right (cddr rule))
-              (new-form (second form))
-              (new-rules
-               (loop :for or-clause :in (cddr form)
-                     :collect `(,rule-left ,rule-action
-                                ,@(replace (copy-list rule-right)
-                                           (list or-clause)
-                                           :start1 pos :end1 (1+ pos))))))
-         (if (consp new-form)
-             (multiple-value-bind (new-form2 new-rules2 transform2)
-                 (parse-complex-form new-form rule pos)
-               (values new-form2
-                       (nconc new-rules2 new-rules)
-                       transform2))
-             (values new-form
-                     new-rules
-                     nil))))
       ((:maybe)
        (push (if (cddr form)
                  `(,generated-sym1 (:action #'list)
@@ -234,6 +217,61 @@ environment.  If found, return it; otherwise create new object."
                  ,item)
                generated-rules)
          (values generated-sym1 generated-rules 'common-lisp:reverse))))))
+
+(defparameter +inlineable-forms+
+  '(:or or))
+
+(defun expand-inlinable-form (form rule pos)
+  (let ((generated-sym1 (gensym)))
+    (ecase (first form)
+      ((:or or)
+       (let ((short-subforms ())
+             (long-subforms ()))
+         (dolist (subform (rest form))
+           (cond
+             ((atom subform)
+              (push subform short-subforms))
+             ((null (rest subform))
+              (push (first subform) short-subforms))
+             (t
+              (push subform long-subforms))))
+         (when long-subforms
+           (push generated-sym1 short-subforms))
+         (format t "Short subforms: ~S~%Long subforms: ~S~%"
+                 short-subforms
+                 long-subforms)
+         (let* ((rule-left (first rule))
+                (rule-action (second rule))
+                (rule-right (cddr rule))
+                (new-form (first short-subforms))
+                (new-rules
+                 (loop :for or-clause :in (rest short-subforms)
+                       :collect `(,rule-left ,rule-action
+                                  ,@(replace (copy-list rule-right)
+                                             (list or-clause)
+                                             :start1 pos :end1 (1+ pos))))))
+           (dolist (subform long-subforms)
+             (push `(,generated-sym1 (:action #'list)
+                     ,@subform)
+                   new-rules))
+           (if (consp new-form)
+               (multiple-value-bind (new-form2 new-rules2 transform2)
+                   (parse-complex-form new-form rule pos)
+                 (values new-form2
+                         (nconc new-rules2 new-rules)
+                         transform2))
+               (values new-form
+                       new-rules
+                       nil))))))))
+
+(defun parse-complex-form (form rule pos)
+  (cond
+    ((member (first form)
+             +complex-forms+)
+     (expand-complex-form form rule pos))
+    ((member (first form)
+             +inlineable-forms+)
+     (expand-inlinable-form form rule pos))))
 
 (defun apply-argument-transforms (transforms rule-params)
   (destructuring-bind (&key action &allow-other-keys) rule-params
@@ -265,36 +303,46 @@ environment.  If found, return it; otherwise create new object."
                              (funcall ,action ,@arguments))))
                       rule-params)))))
 
-(defun expand-rules (rules)
+(defun expand-rules* (expander prefix-set rules)
   (mapcan
    #'(lambda (rule)
        (let ((more-rules ())
              (transforms nil))
-         (let ((new-rhs
-                (loop :for form :in (cddr rule)
-                      :for pos :from 0
-                      :if (consp form)
-                      :collect
-                      (multiple-value-bind (new-nterm new-rules transform)
-                          (parse-complex-form form rule pos)
-                        (push transform transforms)
-                        (setf more-rules
-                              (nconc more-rules
-                                     (expand-rules new-rules)))
-                        new-nterm)
-                      :else
-                      :do (push nil transforms)
-                      :and :collect form
-                      :end)))
+         (let* ((rhs-expand
+                 (loop :for form :in (cddr rule)
+                       :for pos :from 0
+                       :if (and (consp form)
+                                (member (first form)
+                                        prefix-set
+                                        :test #'eq))
+                       :collect
+                       (multiple-value-bind (new-nterm new-rules transform)
+                           (funcall expander form rule pos)
+                         (push transform transforms)
+                         (setf more-rules
+                               (nconc more-rules
+                                      (expand-rules new-rules)))
+                         new-nterm)
+                       :else
+                       :do (push nil transforms)
+                       :and :collect form
+                       :end)))
            (setf transforms (nreverse transforms))
            (list*
             `(,(first rule)
-              ,(if (some #'identity transforms)
-                   (apply-argument-transforms transforms (second rule))
-                   (second rule))
-              ,@new-rhs)
+                   ,(if (some #'identity transforms)
+                        (apply-argument-transforms transforms (second rule))
+                        (second rule))
+              ,@rhs-expand)
             more-rules))))
    rules))
+
+(defun expand-rules (rules)
+  (expand-rules* #'expand-inlinable-form
+                +inlineable-forms+
+                (expand-rules* #'expand-complex-form
+                               +complex-forms+
+                               rules)))
 
 (defun parse-grammar (initial terminals rules &key prec-info)
   (push +EOF+ terminals)
