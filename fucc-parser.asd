@@ -24,13 +24,16 @@
 (asdf:defsystem #:fucc-parser
  :name "LR-parser"
  :author "Ivan Boldyrev"
- :version "0.0"
- :components ((:file "fucc-package")
-              (:file "fucc-decl"
-                     :depends-on ("fucc-package"))
-              (:file "fucc-util"
-                     :depends-on ("fucc-package" "fucc-decl"))
-              (:file "fucc-parser"
-                     :depends-on ("fucc-package" "fucc-decl" "fucc-util"))))
+ :version "0.1.1"
+ :components ((:module "parser"
+               :pathname #.(make-pathname :directory '(:relative "parser"))
+               :components
+               ((:file "fucc-package")
+                (:file "fucc-decl"
+                       :depends-on ("fucc-package"))
+                (:file "fucc-util"
+                       :depends-on ("fucc-package" "fucc-decl"))
+                (:file "fucc-parser"
+                       :depends-on ("fucc-package" "fucc-decl" "fucc-util"))))))
 
 ; (asdf:operate 'asdf:load-op :fucc-parser)
