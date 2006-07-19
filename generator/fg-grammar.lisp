@@ -269,15 +269,14 @@ environment.  If found, return it; otherwise create new object."
   (mapcan
    #'(lambda (rule)
        (let ((more-rules ())
-             (rule2 (generate-action rule))
              (transforms nil))
          (let ((new-rhs
-                (loop :for form :in (cddr rule2)
+                (loop :for form :in (cddr rule)
                       :for pos :from 0
                       :if (consp form)
                       :collect
                       (multiple-value-bind (new-nterm new-rules transform)
-                          (parse-complex-form form rule2 pos)
+                          (parse-complex-form form rule pos)
                         (push transform transforms)
                         (setf more-rules
                               (nconc more-rules
@@ -289,10 +288,10 @@ environment.  If found, return it; otherwise create new object."
                       :end)))
            (setf transforms (nreverse transforms))
            (list*
-            `(,(first rule2)
+            `(,(first rule)
               ,(if (some #'identity transforms)
-                   (apply-argument-transforms transforms (second rule2))
-                   (second rule2))
+                   (apply-argument-transforms transforms (second rule))
+                   (second rule))
               ,@new-rhs)
             more-rules))))
    rules))
@@ -305,7 +304,9 @@ environment.  If found, return it; otherwise create new object."
                             initial))))
   (with-new-grammar-environment
     (multiple-value-bind (terms first-nterm-id)  (init-env terminals)
-      (let* ((proc-rules (mapcar #'process-rule (expand-rules rules)))
+      (let* ((proc-rules (mapcar #'process-rule
+                                 (expand-rules
+                                  (mapcar #'generate-action rules))))
              (nterms (sort (loop :for nterm
                                  :being :each :hash-value :of *grammar-environment*
                                  :when (not (term-p nterm))
