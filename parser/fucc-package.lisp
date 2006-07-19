@@ -27,5 +27,10 @@
    #:defparser
    #:parser-lr
    #:use-value
+   #:use-action
+   #:skip-token
+   #:use-token
+   #:insert-token
+   #:insert-token-list
    #:*next-token*
    #:*next-data*))
