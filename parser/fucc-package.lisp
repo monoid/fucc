@@ -26,5 +26,6 @@
   (:export
    #:defparser
    #:parser-lr
+   #:use-value
    #:*next-token*
    #:*next-data*))

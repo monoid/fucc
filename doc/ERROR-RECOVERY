@@ -55,4 +55,12 @@ FUCC:USE-ACTION action
   Use action for recovery.  Action can be selected from list of
   conflicting action or something else.
 
+*** Other condition
+During semantic value evaluation, restart FUCC:USE-VALUE is available.
+You can use it when handling errors in semantic actions.
+
+**** Restarts
+FUCC:USE-VALUE value
+  Use this value instead.
+
 ;;; LocalWords:  FUCC HyperSpec

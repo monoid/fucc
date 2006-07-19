@@ -73,8 +73,12 @@ destructively modified."
                                        (reduce-action-term action))))
             (push new-state state-stack)
             (setf data-stack
-                  (cons (apply (reduce-action-function action) data)
-                        rest-data))
+                  (cons
+                   (restart-case
+                       (apply (reduce-action-function action) data)
+                     (use-value (value)
+                       value))
+                   rest-data))
             (setf term-stack
                   (cons (reduce-action-term action)
                         (nthcdr len
