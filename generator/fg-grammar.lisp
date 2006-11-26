@@ -237,9 +237,6 @@ environment.  If found, return it; otherwise create new object."
               (push subform long-subforms))))
          (when long-subforms
            (push generated-sym1 short-subforms))
-         (format t "Short subforms: ~S~%Long subforms: ~S~%"
-                 short-subforms
-                 long-subforms)
          (let* ((rule-left (first rule))
                 (rule-action (second rule))
                 (rule-right (cddr rule))
