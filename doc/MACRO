@@ -1,7 +1,8 @@
 -*- mode: outline; -*-
 
 Macro FUCC:DEFPARSER variable initial (&rest terminals) (&rest rules)
-                     &key prec-info
+                     &key reserved-terminals
+                          prec-info
                           (type :lalr)
                           lexer-options
 
@@ -109,6 +110,12 @@ Such expression must be used with caution: they can introduce
 conflicts.
 
 Keywords:
+
+* :RESERVED-TERMINALS
+  List of terminals that are reserved, i.e. are not used by current
+  grammar, but defined by language.  If there are some terminals that
+  are not declared reserved but unused, warning is signaled.  If some
+  reserved terminals are used, another warning is signaled.
 
 * :PREC-INFO
 

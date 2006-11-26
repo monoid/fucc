@@ -24,7 +24,8 @@
 (in-package #:fucc-generator)
 
 (defmacro fucc:defparser (variable initial (&rest terminals) (&rest rules)
-                          &key prec-info
+                          &key reserved-terminals
+                               prec-info
                                (type :lalr)
                                lexer-options)
   (let ((grammar (parse-grammar initial terminals rules :prec-info prec-info))
@@ -51,11 +52,17 @@
         (setf unproductive
               (sort unproductive #'nterm<=))
         (warn "Unproductive nonterminals:~%~{ ~S~}"
-              unproductive))
-      (when unused
-        (setf unused (sort unused #'nterm<=))
-        (warn "Unused (non)terminals:~%~{ ~S~}"
-              unused))
+              (mapcar #'nterm-name unproductive)))
+
+      (let ((unused-names (mapcar #'nterm-name unused)))
+        (let ((unused-by-mistake
+               (set-difference unused-names reserved-terminals))
+              (used-by-mistake
+               (set-difference reserved-terminals unused-names)))
+          (when unused-by-mistake
+            (warn "Unused (non)terminals:~%~{ ~S~}" unused-by-mistake))
+          (when used-by-mistake
+            (warn "Used reserved terminals:~%~{ ~S~}" used-by-mistake))))
       (when (or unproductive unused)
         ;; Recalculate grammar properties
         (loop :for idx :from 0
