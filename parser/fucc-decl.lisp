@@ -29,18 +29,24 @@
 ;;;
 
 (define-condition parse-error-condition ()
-  ((config :initarg :config
-           :reader error-config)
+  ((config :initarg :config ;; Config is for LR only?
+           :reader error-config
+           :documentation "Runtime configuration of parser")
    (token-id :initarg :token-id
-             :reader error-token-id)
+             :reader error-token-id
+             :documentation "ID of token that caused the error")
    (data :initarg :data
-         :reader error-data)))
+         :reader error-data
+         :documentation "Semantic data associated with token"))
+  (:documentation "General parsing error"))
 
 (define-condition parse-conflict-condition (parse-error-condition)
   ((possible-actions :initform nil
                      :initarg :actions
                      :type list
-                     :reader possible-actions)))
+                     :documentation "List of conflicting actions"
+                     :reader possible-actions))
+  (:documentation "Unresolved conflict in parser"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -105,16 +111,20 @@
   )
 
 (defun action-type (action)
+  "Action designator (implementation-dependent)"
   (type-of action))
 
 (defstruct lr-config
-  (state-stack (error "") :type list)
+  (state-stack (error ")") :type list)
   (term-stack nil :type list)
   (data-stack nil :type list))
 
 (defmacro with-lr-config ((state-stack-var term-stack-var data-stack-var)
                                 stack
                                 &body body)
+  "Components of stack returned by STACK expressions are bound to
+variables named by symbols in STATE-STACK-VAR, TERM-STACK-VAR and
+DATA-STACK-VAR.  These variables can be used in the BODY."
   (declare (type symbol state-stack-var term-stack-var data-stack-var)
            (type t stack))
   (let ((stack-var (gensym)))
