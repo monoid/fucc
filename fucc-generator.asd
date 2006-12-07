@@ -27,7 +27,6 @@
     :version "0.1.1"
     :depends-on ("fucc-parser")
     :components ((:module "generator"
-                  :pathname #.(make-pathname :directory '(:relative "generator"))
                   :components
                   ((:file "fg-package")
                    (:file "fg-util"

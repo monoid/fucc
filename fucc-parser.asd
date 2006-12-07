@@ -26,7 +26,6 @@
  :author "Ivan Boldyrev"
  :version "0.1.1"
  :components ((:module "parser"
-               :pathname #.(make-pathname :directory '(:relative "parser"))
                :components
                ((:file "fucc-package")
                 (:file "fucc-decl"
