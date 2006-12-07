@@ -122,7 +122,9 @@ destructively modified."
                    (if (eq action-type 'reduce-action)
                        (parser-lr--reduce! config action parser atom-id data) ; Reduction
                        ;;  Or error handling
-                       (error 'parse-error-condition
+                       (error 'lr-parse-error-condition
+                              :token-id atom-id
+                              :data data
                               :config config))
                  ;; Restarts
                  (skip-token ()

@@ -6,7 +6,7 @@ FUCC signals about different problems (input errors, shift/reduce or
 reduce/reduce conflicts).  You can continue parsing with different
 restarts.  See Common Lisp HyperSpec, 9.1 Conditions.
 
-** Condition
+** Conditions
 
 *** FUCC:PARSE-ERROR-CONDITION
 Parsing error.
@@ -14,9 +14,8 @@ Parsing error.
 **** Readers
 FUCC:ERROR-TOKEN-ID
 FUCC:ERROR-DATA
-FUCC:ERROR-CONFIG
 
-Token ID and data received from lexer, and parser configuration.
+Token ID and data received from lexer.
 
 **** Restarts
 FUCC:SKIP-TOKEN
@@ -39,6 +38,13 @@ FUCC:INSERT-TOKEN-LIST list
 
   List consists of cons pairs (TOKEN . DATA).
 
+
+*** FUCC:LR-PARSE-ERROR-CONDITION
+Subclass of FUCC:PARSE-ERROR-CONDITION.
+
+**** Readers
+FUCC:ERROR-CONFIG
+  Configuration of LR-parser.
 
 *** FUCC:PARSE-CONFLICT-CONDITION
 Shift/reduce or reduce/reduce conflict.  Reader FUCC:POSSIBLE-ACTIONS

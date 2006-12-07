@@ -29,16 +29,20 @@
 ;;;
 
 (define-condition parse-error-condition ()
-  ((config :initarg :config ;; Config is for LR only?
-           :reader error-config
-           :documentation "Runtime configuration of parser")
-   (token-id :initarg :token-id
+  ((token-id :initarg :token-id
              :reader error-token-id
              :documentation "ID of token that caused the error")
    (data :initarg :data
          :reader error-data
          :documentation "Semantic data associated with token"))
   (:documentation "General parsing error"))
+
+(define-condition lr-parse-error-condition
+    (parse-error-condition)
+  ((config :initarg :config
+           :reader error-config
+           :documentation "Runtime configuration of parser"))
+  (:documentation "LR-specific parser error"))
 
 (define-condition parse-conflict-condition (parse-error-condition)
   ((possible-actions :initform nil

@@ -32,5 +32,7 @@
    #:use-token
    #:insert-token
    #:insert-token-list
+   #:parse-error-condition
+   #:lr-parse-error-condition
    #:*next-token*
    #:*next-data*))
