@@ -45,12 +45,12 @@
         (j-var (gensym))
         (redux-var (gensym)))
     (dotimes (state (array-dimension action-table 0))
-      (dotimes (term (array-dimension action-table 1))
-        (let ((actions (aref action-table state term)))
+      (dotimes (terminal (array-dimension action-table 1))
+        (let ((actions (aref action-table state terminal)))
           (assert (null (rest actions)) nil
                   "Unresolved conflicts found at (~S ~S): ~S"
-                  term state actions)
-          (setf (aref array state term)
+                  terminal state actions)
+          (setf (aref array state terminal)
            (ecase (car (first actions))
              ((:shift)
               (list :shift :new-state (cddr (first actions))))
@@ -104,9 +104,9 @@
 (defun dump-goto-to-2d (goto-table)
   (let ((goto-tbl (make-array (array-dimensions goto-table)
                               :initial-element nil)))
-    (dotimes (nterm (array-dimension goto-table 0))
-      (loop :for (old-state . new-state) :in (aref goto-table nterm) :do
-            (setf (aref goto-tbl old-state nterm)
+    (dotimes (nterminal (array-dimension goto-table 0))
+      (loop :for (old-state . new-state) :in (aref goto-table nterminal) :do
+            (setf (aref goto-tbl old-state nterminal)
                   new-state)))
     goto-tbl))
 
@@ -115,8 +115,8 @@
   `(list ,(dump-action-to-2d action-table)
     ,(dump-goto-to-2d goto-table)))
 
-;;; Action table is 2d (state, term) , goto table is list of
-;;; (old-state . new-state) for given nterm
+;;; Action table is 2d (state, terminal) , goto table is list of
+;;; (old-state . new-state) for given nterminal
 (defun dump-to-2d-and-1d (action-table goto-table)
   `(list ,(dump-action-to-2d action-table)
     ,goto-table))
@@ -126,11 +126,11 @@
   (let* ((size (array-dimension action-table 0))
          (result (make-array size :initial-element nil)))
     (dotimes (state size)
-      (loop :for term-id :from 0 :below (array-dimension action-table 1)
-            :for term :in (grammar-terms grammar) :do
-            (let ((actions (aref action-table state term-id)))
+      (loop :for terminal-id :from 0 :below (array-dimension action-table 1)
+            :for terminal :in (grammar-terminals grammar) :do
+            (let ((actions (aref action-table state terminal-id)))
               (when actions
-                (push (nterm-name term) (aref result state)))))
+                (push (nterm-name terminal) (aref result state)))))
       ;; Just to preserve correct order of terminals for user
       ;; convenience
       (setf #1=(aref result state)

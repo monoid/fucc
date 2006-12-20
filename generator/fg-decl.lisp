@@ -48,12 +48,21 @@
 (defmethod prec-priority ((number number))
   number)
 
+;; TODO: remove action :initform and prec-mixin: unsuitable for LL
 (defclass rule (properties prec-mixin)
-  ((left :accessor rule-left :initarg  :left)
-   (right :accessor rule-right :initarg :right)
-   (length :reader rule-length)
+  ((left :accessor rule-left
+         :accessor rule-nterminal
+         :initarg :left
+         :documentation "Left-hand size: non-terminal")
+   (right :accessor rule-right
+          :accessor rule-production
+          :initarg :right
+          :documentation "Right-hand side: list of terms")
+   (length :reader rule-length
+           :documentation "Cached length of right-hand side")
    (index :accessor rule-index :initarg :index)
    (action :accessor rule-action
+           :documentation "Action of the rule that creates rule's result"
            :initarg :action
            :initform (error "Action is not provided"))))
 
@@ -79,12 +88,12 @@
   ((name :accessor nterm-name :initarg :name)
    (rules :accessor nterm-rules :initarg :rules :initform nil)
    (id :accessor nterm-id :initarg :id)
-   (is-term :accessor term-p :initarg :is-term :initform nil)))
+   (is-terminal :accessor terminal-p :initarg :is-terminal :initform nil)))
 
 (defmethod nterm-name ((name null))
   nil)
 
-(defmethod term-p ((term null))
+(defmethod terminal-p ((term null))
   nil)
 
 (defun make-nterm (&rest args)
@@ -94,14 +103,14 @@
 (defvar *grammar-next-id*)
 
 (defclass grammar ()
-  ((nterms :accessor grammar-nterms :initarg :nterms)
-   (terms :accessor grammar-terms :initarg :terms)
+  ((nterminals :accessor grammar-nterminals :initarg :nterminals)
+   (terminals :accessor grammar-terminals :initarg :terminals)
    (rules :accessor grammar-rules :initarg :rules)
    (environment :accessor grammar-environment
                 :initarg :environment
                 :initform *grammar-environment*)
-   (first-nterm-id :accessor first-nterm-id
-                   :initarg :first-nterm-id
+   (first-nterminal-id :accessor first-nterminal-id
+                   :initarg :first-nterminal-id
                    :initform *grammar-next-id*)
    (prec-info :accessor grammar-prec-info
                :initarg :precedence
@@ -176,7 +185,7 @@
 
 (defmethod print-object ((nterm nterm) output)
   (format output "#<~A :NAME ~S :ID ~S>"
-          (if (term-p nterm)
+          (if (terminal-p nterm)
               "TERM"
               "NTERM")
           (nterm-name nterm)

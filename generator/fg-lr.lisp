@@ -35,18 +35,18 @@
                  (first-set (seq-first
                              (append (nthcdr (1+ pos) (rule-right rule))
                                      (lrpoint-lahead lrp)))))
-             (when (and nterm (not (term-p nterm)))
-               (dolist (term first-set)
-                 (when term
-                   (pushnew (list nterm term)
+             (when (and nterm (not (terminal-p nterm)))
+               (dolist (terminal first-set)
+                 (when terminal
+                   (pushnew (list nterm terminal)
                             result
                             :test #'equal))))))
          result))
    #'(lambda (cons)
-       (destructuring-bind (nterm . lahead) cons
+       (destructuring-bind (nterminal . lahead) cons
          (mapcar #'(lambda (rule)
                      (make-lrpoint :rule rule :pos 0 :lahead lahead))
-                 (nterm-rules nterm))))
+                 (nterm-rules nterminal))))
    #'lrpoint<=))
 
 (defun goto-lr1 (set nterm)

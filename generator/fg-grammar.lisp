@@ -35,7 +35,7 @@ first ID of non-terminals."
                        terminals)))
     (values terms *grammar-next-id*)))
 
-(defun get-nterm (name &key is-term)
+(defun get-nterm (name &key is-terminal)
   "If NAME is NIL, return NIL.  Otherwise look for NAME in
 environment.  If found, return it; otherwise create new object."
   (if (null name)
@@ -46,7 +46,7 @@ environment.  If found, return it; otherwise create new object."
             (setf (gethash name *grammar-environment*)
                   (make-nterm :name name
                               :id (incf *grammar-next-id*)
-                              :is-term is-term))))))
+                              :is-terminal is-terminal))))))
 
 (defun process-rule (s-rule)
   "Process given rule and return RULE object."
@@ -63,24 +63,24 @@ environment.  If found, return it; otherwise create new object."
 
 (defun set-precedence-info (grammar)
   ;; Set terminals' precedence info
-  (loop :for (prec . terms) :in (grammar-prec-info grammar)
+  (loop :for (prec . terminals) :in (grammar-prec-info grammar)
         :for idx :from 0
-        :do (dolist (term terms)
-              (let ((nt (nterm-by-name term grammar)))
+        :do (dolist (terminal terminals)
+              (let ((nt (nterm-by-name terminal grammar)))
                 (setf (prec-assoc nt) prec)
                 (setf (prec-priority nt) idx))))
   ;; Set rules' precedence info
   (loop :for rule :in (grammar-rules grammar) :do
         (if (and (slot-boundp rule 'priority)
                  (symbolp (prec-priority rule)))
-            (let ((term (nterm-by-name (prec-priority rule) grammar)))
-              (setf (prec-assoc rule)    (prec-assoc term)
-                    (prec-priority rule) (prec-priority term)))
-            (let ((last-term (find-if #'term-p (rule-right rule)
+            (let ((terminal (nterm-by-name (prec-priority rule) grammar)))
+              (setf (prec-assoc rule)    (prec-assoc terminal)
+                    (prec-priority rule) (prec-priority terminal)))
+            (let ((last-terminal (find-if #'terminal-p (rule-right rule)
                                    :from-end t)))
-              (when last-term
-                (setf (prec-assoc    rule) (prec-assoc    last-term)
-                  (prec-priority rule) (prec-priority last-term)))))))
+              (when last-terminal
+                (setf (prec-assoc    rule) (prec-assoc    last-terminal)
+                  (prec-priority rule) (prec-priority last-terminal)))))))
 
 (defun generate-action--class (lhs class rule-info rhs)
   (let ((rev-arglist '())
@@ -371,20 +371,20 @@ environment.  If found, return it; otherwise create new object."
                 (list (list +START+ '(:action (function identity))
                             initial))))
   (with-new-grammar-environment
-    (multiple-value-bind (terms first-nterm-id)  (init-env terminals)
+    (multiple-value-bind (terminals first-nterm-id)  (init-env terminals)
       (let* ((proc-rules (mapcar #'process-rule
                                  (expand-rules
                                   (mapcar #'generate-action rules))))
-             (nterms (sort (loop :for nterm
+             (nterminals (sort (loop :for nterm
                                  :being :each :hash-value :of *grammar-environment*
-                                 :when (not (term-p nterm))
+                                 :when (not (terminal-p nterm))
                                  :collect nterm)
                           #'<
                           :key #'nterm-id)))
         (let ((grammar (make-grammar :first-nterm-id first-nterm-id
                                      :rules proc-rules
-                                     :terms terms
-                                     :nterms nterms
+                                     :terminals terminals
+                                     :nterminals nterminals
                                      :precedence prec-info)))
           (set-precedence-info grammar)
           grammar)))))
@@ -400,7 +400,7 @@ environment.  If found, return it; otherwise create new object."
          (nterm-id b)))))
 
 (defun nterm-by-name (name grammar)
-  "Return NTERM by NAME in given GRAMMAR"
+  "Find NTERM by NAME in given GRAMMAR"
   (gethash name (grammar-environment grammar)))
 
 (defun renumber-rules (grammar)
@@ -417,29 +417,29 @@ environment.  If found, return it; otherwise create new object."
 
 (defun calculate-first (grammar)
   "Calculate FIRST for every nterm of grammar."
-  ;; Assign FIRST of terms to themselves
-  (dolist (term (grammar-terms grammar))
-    (setf (nterm-first term) (list term)))
-  ;; Set FIRST of nterms to NIL initially
-  (dolist (nterm (grammar-nterms grammar))
-    (setf (nterm-first nterm) nil))
-  ;; Calculate FIRST of nterms
+  ;; Assign FIRST of terminals to themselves
+  (dolist (terminal (grammar-terminals grammar))
+    (setf (nterm-first terminal) (list terminal)))
+  ;; Set FIRST of nterminals to NIL initially
+  (dolist (nterminal (grammar-nterminals grammar))
+    (setf (nterm-first nterminal) nil))
+  ;; Calculate FIRST of nterminals
   (let ((more-repeats t))
     (loop
      :while more-repeats :do
      (setf more-repeats nil)
-     (dolist (nterm (grammar-nterms grammar))
-       (let ((nt-first-orig (nterm-first nterm))
+     (dolist (nterminal (grammar-nterminals grammar))
+       (let ((nt-first-orig (nterm-first nterminal))
              (nt-first-more (reduce #'(lambda  (a b)
                                         (ounion a b :ordering #'nterm<=))
-                                    (nterm-rules nterm)
+                                    (nterm-rules nterminal)
                                     :initial-value nil
                                     :key #'(lambda (rule)
                                              (seq-first (rule-right rule))))))
          (let ((nt-first-new (ounion nt-first-orig nt-first-more
                                      :ordering #'nterm<=)))
            (when (not (equal nt-first-orig nt-first-new))
-             (setf (nterm-first nterm) nt-first-new)
+             (setf (nterm-first nterminal) nt-first-new)
              (setf more-repeats t))))))))
 
 (defun item-first (something)

@@ -24,21 +24,21 @@
 (cl:in-package #:fucc-generator)
 
 (let ((processed-lrpoints (make-hash-table :test 'eql))
-      (processed-nterms (make-hash-table :test 'equal))
+      (processed-nterminals (make-hash-table :test 'equal))
       (new-unprocessed (make-hash-table :test 'equal)))
   (defun closure (set proceed expand ordering)
     (declare (type function proceed expand ordering))
     (let ((unprocessed 'nil))
-      ;; Initial set of non-kernel nterms
+      ;; Initial set of non-kernel nterminals
       (dolist (elt set)
         (dolist (new-elt (funcall proceed elt))
-          (unless (gethash new-elt processed-nterms)
+          (unless (gethash new-elt processed-nterminals)
             (push new-elt unprocessed))))
       (loop :while unprocessed :do
             (clrhash new-unprocessed)
             ;; Mark as processed _before_ processing
             (dolist (unpr unprocessed)
-              (setf (gethash unpr processed-nterms) t))
+              (setf (gethash unpr processed-nterminals) t))
             ;; Process
             (dolist (unpr unprocessed)
               (dolist (pt (funcall expand unpr))
@@ -48,7 +48,7 @@
                                    #'lrpoint=))
                   (dolist (candidate (funcall proceed pt))
                     (when (and candidate
-                               (not (gethash candidate processed-nterms)))
+                               (not (gethash candidate processed-nterminals)))
                       (iget candidate new-unprocessed #'sxhash #'equal))))))
             (setf unprocessed (itable-to-list new-unprocessed)))
       (prog1
@@ -57,16 +57,16 @@
                  set)
                 ordering)
         (clrhash processed-lrpoints)
-        (clrhash processed-nterms)
+        (clrhash processed-nterminals)
         (clrhash new-unprocessed)))))
 
 (let ((data (make-hash-table :test 'eql)))
-  (defun goto-nc (set nterm pred)
+  (defun goto-nc (set nterminal pred)
     (loop :for lrp :in set
           :for rule := (lrpoint-rule lrp)
           :for pos := (lrpoint-pos lrp)
           :when (and (< pos (rule-length rule))
-                     (funcall pred nterm rule pos))
+                     (funcall pred nterminal rule pos))
           :do  (iget (advance-lrpoint lrp) data #'lrpoint-hash #'lrpoint=))
     (prog1
         (sort (itable-to-list data) #'lrpoint<=)
@@ -83,10 +83,10 @@
           (let ((new-unprocessed nil))
             (dolist (item unprocessed)
               (iget item items #'item-hash #'item=))
-            (dolist (nterm (append (grammar-terms grammar)
-                                   (grammar-nterms grammar)))
+            (dolist (nterminal (append (grammar-terminals grammar)
+                                   (grammar-nterminals grammar)))
               (dolist (item unprocessed)
-                (let ((new-set (funcall goto-fun (item-set item) nterm)))
+                (let ((new-set (funcall goto-fun (item-set item) nterminal)))
                   (when new-set
                     (let* ((new-item (make-item :set new-set))
                            (member (iget new-item items
@@ -95,7 +95,7 @@
                       (when (eq new-item member)
                         ;; The item is new
                         (push member new-unprocessed))
-                      (push (cons nterm member)
+                      (push (cons nterminal member)
                             (item-moves item)))))))
             (setf unprocessed new-unprocessed)))
     (cons root-item
@@ -212,15 +212,15 @@
         :for num :from 0 :do
         (setf (item-index item) num))
   (let ((state-num (length items))
-        (terms-num (length (grammar-terms grammar)))
-        (nterms-num (length (grammar-nterms grammar))))
-    (let ((action-table (make-array (list state-num terms-num)
+        (terminals-num (length (grammar-terminals grammar)))
+        (nterminals-num (length (grammar-nterminals grammar))))
+    (let ((action-table (make-array (list state-num terminals-num)
                                     :initial-element nil))
-          (goto-table (make-array (1- nterms-num) :initial-element nil)))
+          (goto-table (make-array (1- nterminals-num) :initial-element nil)))
       ;; Shifts
       (dolist (item items)
         (loop :for (nterm . new-item) :in (item-moves item) :do
-              (if (term-p nterm)
+              (if (terminal-p nterm)
                   (pushnew (list* :shift nterm (item-index new-item))
                            (aref action-table
                                  (item-index item)
@@ -230,7 +230,7 @@
                                  (item-index new-item))
                            (aref goto-table
                                  (- (nterm-id nterm)
-                                    terms-num))
+                                    terminals-num))
                            :test #'equal))))
       ;; Reduce or accept
       (dolist (item items)
@@ -252,15 +252,15 @@
          (not (null (first left-side)))
          (null (rest left-side)))))
 
-(defun one-step-chain-rule-p (rule state term-id action-table goto-table)
+(defun one-step-chain-rule-p (rule state terminal-id action-table goto-table)
   (assert (chain-rule-p rule))
   (let* ((idx (nterm-id (first (rule-left rule))))
          (new-state (aref goto-table idx state))
-         (new-actions (aref action-table new-state term-id)))
+         (new-actions (aref action-table new-state terminal-id)))
     (find :action new-actions :key #'car)))
 
-(defun reduce-action (action state term action-table goto-table)
-  (declare (ignore action state term action-table goto-table))
+(defun reduce-action (action state terminal action-table goto-table)
+  (declare (ignore action state terminal action-table goto-table))
   (error "REDUCE-ACTION is unimplemented yet"))
 
 (defun remove-chain-rules (action-table goto-table)
@@ -279,16 +279,16 @@
           (let ((new-unprocessed nil))
             (setf repeat-flag nil)
             (loop :for unproc :in unprocessed :do
-                  (destructuring-bind (state term action action-tail) unproc
+                  (destructuring-bind (state terminal action action-tail) unproc
                     (if (one-step-chain-rule-p (cadr action)
                                                state
-                                               term
+                                               terminal
                                                action-table
                                                goto-table)
                         (setf (first action-tail)
                               (reduce-action action
                                              state
-                                             term
+                                             terminal
                                              action-table
                                              goto-table)
                               ;; Set repeat-flag

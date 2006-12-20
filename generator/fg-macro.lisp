@@ -32,8 +32,8 @@
         (%/value/-var (gensym))
         (mapping-var (gensym))
         (state-var (gensym))
-        (nterm-var (gensym))
-        (term-var (gensym))
+        (nterminal-var (gensym))
+        (terminal-var (gensym))
         (parser-var (gensym))
         (goto-table-var (gensym))
         (new-state-var (gensym))
@@ -66,11 +66,11 @@
       (when (or unproductive unused)
         ;; Recalculate grammar properties
         (loop :for idx :from 0
-              :for term :in (grammar-terms grammar) :do
-              (setf (nterm-id term) idx))
-        (loop :for idx :from (length (grammar-terms grammar))
-              :for nterm :in (grammar-nterms grammar) :do
-              (setf (nterm-id nterm) idx))
+              :for terminal :in (grammar-terminals grammar) :do
+              (setf (nterm-id terminal) idx))
+        (loop :for idx :from (length (grammar-terminals grammar))
+              :for nterminal :in (grammar-nterminals grammar) :do
+              (setf (nterm-id nterminal) idx))
         (renumber-rules grammar)
         (calculate-first grammar)
         (calculate-follow grammar)))
@@ -107,26 +107,26 @@
                  (,mapping-var (fucc::alist-to-hash-table
                            ',(list*
                               (cons nil 0)
-                              (mapcar #'(lambda (term)
-                                          (cons (nterm-name term)
-                                                (nterm-id term)))
-                                      (rest (grammar-terms grammar)))))))
+                              (mapcar #'(lambda (terminal)
+                                          (cons (nterm-name terminal)
+                                                (nterm-id terminal)))
+                                      (rest (grammar-terminals grammar)))))))
              (list
               0                      ; TODO: mechanism-dependent value
-              #'(lambda (,state-var ,term-var ,parser-var) ; TODO: ditto
-                  (setf ,term-var (or (gethash ,term-var ,mapping-var)
-                                      (and ,term-var
+              #'(lambda (,state-var ,terminal-var ,parser-var) ; TODO: ditto
+                  (setf ,terminal-var (or (gethash ,terminal-var ,mapping-var)
+                                      (and ,terminal-var
                                            ;; TODO: specific condition type
-                                           (error "Unknown terminal ~S" ,term-var))
+                                           (error "Unknown terminal ~S" ,terminal-var))
                                       0))
                   (aref (fourth ,parser-var)
-                        ,state-var ,term-var))
-              #'(lambda (,state-var ,nterm-var ,parser-var) ; TODO: ditto
+                        ,state-var ,terminal-var))
+              #'(lambda (,state-var ,nterminal-var ,parser-var) ; TODO: ditto
                   (let* ((,goto-table-var (fifth ,parser-var))
                          (,new-state-var
                           (cdr (assoc ,state-var
                                       (aref ,goto-table-var
-                                            (- ,nterm-var ,(length (grammar-terms grammar))))))))
+                                            (- ,nterminal-var ,(length (grammar-terminals grammar))))))))
                     (assert ,new-state-var)
                     ,new-state-var))
               (first ,%/value/-var)

@@ -31,21 +31,21 @@
                      (result nil))
                  (when (< lr-pos (rule-length lr-rule))
                    (let ((nterm (elt (rule-right lr-rule) lr-pos)))
-                     (when (and nterm (not (term-p nterm)))
+                     (when (and nterm (not (terminal-p nterm)))
                        (pushnew nterm result))))
                  result))
-           #'(lambda (nterm)
+           #'(lambda (nterminal)
                (mapcar #'(lambda (rule)
                            (make-lrpoint :rule rule :pos 0))
-                       (nterm-rules nterm)))
+                       (nterm-rules nterminal)))
            #'lrpoint<=))
 
-(defun goto-lr0 (set nterm)
+(defun goto-lr0 (set nterminal)
   (closure-lr0
    (goto-nc set
-            nterm
-            #'(lambda (nterm rule pos)
-                (eq nterm (elt (rule-right rule)
+            nterminal
+            #'(lambda (nterminal rule pos)
+                (eq nterminal (elt (rule-right rule)
                                pos))))))
 
 (defun items-lr0 (grammar)
@@ -60,9 +60,9 @@
   "Set rules that can be reduced in given item with LR0 aglorithm."
   (mapcan #'(lambda (lrpoint)
               (if (reduction-lrpoint-p lrpoint)
-                  (mapcar #'(lambda (term)
-                              (list (lrpoint-rule lrpoint) term))
-                          (grammar-terms grammar))
+                  (mapcar #'(lambda (terminal)
+                              (list (lrpoint-rule lrpoint) terminal))
+                          (grammar-terminals grammar))
                   nil))
           (item-set item)))
 
@@ -71,8 +71,8 @@
   (if (eql +START+ (nterm-name (rule-left (lrpoint-rule lrpoint))))
       (list (list (lrpoint-rule lrpoint)
                   (nterm-by-name +EOF+ grammar)))
-      (mapcar #'(lambda (term)
-                  (list (lrpoint-rule lrpoint) term))
+      (mapcar #'(lambda (terminal)
+                  (list (lrpoint-rule lrpoint) terminal))
               (nterm-follow (rule-left (lrpoint-rule lrpoint))))))
 
 (defun reduce-set-slr (item grammar)

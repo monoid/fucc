@@ -42,7 +42,7 @@
 (defparameter +wildcard+
   (make-nterm :name 'no-such-symbol
               :id -1
-              :is-term t)
+              :is-terminal t)
   "Special wildcard terminal for lookahead tracing.")
 
 (setf (nterm-first +wildcard+) (list +wildcard+))
@@ -133,18 +133,18 @@
 
 (define-property rm-info)
 
-(defun update-rm-info (target-nterm rule)
-  "Update RM-INFO for TARGET-NTERM with information from RULE."
-  (if (or (epsilon-rule-p rule) (term-p (first (rule-right rule))))
+(defun update-rm-info (target-nterminal rule)
+  "Update RM-INFO for TARGET-NTERMINAL with information from RULE."
+  (if (or (epsilon-rule-p rule) (terminal-p (first (rule-right rule))))
       nil
       (let ((source (first (rule-right rule)))
             (tail (rest (rule-right rule)))
             (updated-p nil))
         (let ((source-rm-info (rm-info source))
-              (target-rm-info (rm-info target-nterm))
+              (target-rm-info (rm-info target-nterminal))
               (first-set (seq-first tail)))
           (dotimes (i (array-dimension source-rm-info 0))
-            ;; Try uniting info about i-th nterm
+            ;; Try uniting info about i-th nterminal
             (when (aref source-rm-info i)
               (let ((new-value (ounion (aref target-rm-info i)
                                        (combine-first (aref source-rm-info i)
@@ -157,24 +157,24 @@
 
 (defun calculate-rm-info (grammar)
   "Info about rightmost derivations"
-  (let ((nterm-num (length (grammar-nterms grammar)))
-        (term-num (length (grammar-terms grammar))))
-    (dolist (nterm (grammar-nterms grammar))
-      (let ((array (make-array nterm-num :initial-element nil)))
-        (setf (aref array (- (nterm-id nterm) term-num))
+  (let ((nterminal-num (length (grammar-nterminals grammar)))
+        (terminal-num (length (grammar-terminals grammar))))
+    (dolist (nterminal (grammar-nterminals grammar))
+      (let ((array (make-array nterminal-num :initial-element nil)))
+        (setf (aref array (- (nterm-id nterminal) terminal-num))
               '(nil)) ; Or nil?
-        (setf (rm-info nterm) array)))
-    (let ((set (grammar-nterms grammar)))
+        (setf (rm-info nterminal) array)))
+    (let ((set (grammar-nterminals grammar)))
       (loop :while set
-            :for updated-nterms := nil :do
-            (dolist (nterm set)
+            :for updated-nterminals := nil :do
+            (dolist (nterminal set)
               (let ((updated nil))
-                (dolist (rule (nterm-rules nterm))
-                  (when (update-rm-info nterm rule)
+                (dolist (rule (nterm-rules nterminal))
+                  (when (update-rm-info nterminal rule)
                     (setf updated t)))
                 (when updated
-                  (pushnew nterm updated-nterms))))
-            (setf set updated-nterms)))))
+                  (pushnew nterminal updated-nterminals))))
+            (setf set updated-nterminals)))))
 
 ;;; TODO: try specialized version.  Necessary info can be generated
 ;;; during calculation of FIRST.
@@ -188,32 +188,32 @@
     (spread-laheads lr0-items)
     lr0-items))
 
-(defun nterm-epsilon-rules (nterm)
-  "List of epsilon rules of the nterm"
+(defun nterminal-epsilon-rules (nterminal)
+  "List of epsilon rules of the nterminal"
   (mapcan #'(lambda (rule)
               (if (epsilon-rule-p rule)
                   (list rule)
                   nil))
-          (nterm-rules nterm)))
+          (nterm-rules nterminal)))
 
 (defun get-epsilon-reductions (lrpoint lahead grammar)
   "Epsilon reductions that can happen for the LRPOINT and LAHEAD"
   (let ((nterm (nterm-at-pos lrpoint)))
-    (if (or (not nterm) (term-p nterm))
+    (if (or (not nterm) (terminal-p nterm))
         nil
         (let ((accumulator ())
               (rm-info (rm-info nterm)))
           (loop :for i :from 0 :below (array-dimension rm-info 0)
-                :for nterm :in (grammar-nterms grammar) :do
+                :for nterminal :in (grammar-nterminals grammar) :do
                 (let ((first-set (combine-first-sets
                                   (aref rm-info i)
                                   (seq-first
                                    (nthcdr (1+ (lrpoint-pos lrpoint))
                                            (rule-right (lrpoint-rule lrpoint))))
                                   lahead)))
-                  (loop :for rule :in (nterm-epsilon-rules nterm) :do
-                        (loop :for term :in first-set :do
-                              (push (cons rule (list term))
+                  (loop :for rule :in (nterminal-epsilon-rules nterm) :do
+                        (loop :for terminal :in first-set :do
+                              (push (cons rule (list terminal))
                                     accumulator)))))
           (nreverse accumulator)))))
 

@@ -31,23 +31,23 @@
   "Remove rules with unprductive nterms and nterms themself.
 Return list of unprductive nterms."
   (let ((unproductive ()))
-    ;; Terms are productive by definition
-    (dolist (term (grammar-terms grammar))
-      (setf (productive term) t))
-    (dolist (nterm (grammar-nterms grammar))
-      (unless (setf (productive nterm) (nterm-first nterm))
-        (push nterm unproductive)))
+    ;; Terminals are productive by definition
+    (dolist (terminal (grammar-terminals grammar))
+      (setf (productive terminal) t))
+    (dolist (nterminal (grammar-nterminals grammar))
+      (unless (setf (productive nterminal) (nterm-first nterminal))
+        (push nterminal unproductive)))
     (dolist (rule (grammar-rules grammar))
       (setf (productive rule)
             (and (productive (rule-left rule))
                  (every #'productive (rule-right rule)))))
-    ;; Prune grammar's nterm list and nterms' rules
-    (setf (grammar-nterms grammar)
-          (loop :for nterm :in (grammar-nterms grammar)
-                :when (productive nterm)
-                :collect nterm
-                :do (setf (nterm-rules nterm)
-                          (loop :for rule :in (nterm-rules nterm)
+    ;; Prune grammar's nterminal list and nterminals' rules
+    (setf (grammar-nterminals grammar)
+          (loop :for nterminal :in (grammar-nterminals grammar)
+                :when (productive nterminal)
+                :collect nterminal
+                :do (setf (nterm-rules nterminal)
+                          (loop :for rule :in (nterm-rules nterminal)
                                 :when (productive rule)
                                 :collect rule))))
     ;; Prune grammar's rule list
@@ -60,10 +60,10 @@ Return list of unprductive nterms."
 (define-property nterm-used)
 
 (defun delete-unused-term-rules (grammar)
-  "Delete unused terms and nterms (i.e. they have no path from initial
-terminal).  Return list of unused terms/nterms."
+  "Delete unused terminals and nterminals (i.e. they have no path from initial
+terminal).  Return list of unused terminals/nterminals."
   (let ((unused ())
-        (start (first (last (grammar-nterms grammar)))))
+        (start (first (last (grammar-nterminals grammar)))))
     ;; Find unused rules and rules
     ;; TODO: reimplement with bit vectors as sets
     (setf (nterm-used start) t)
@@ -80,21 +80,21 @@ terminal).  Return list of unused terms/nterms."
                 (setf (nterm-used nterm) t))
               (setf unprocessed new-unprocessed))))
     ;; Prune unused rules and rules
-    (setf (grammar-nterms grammar)
-          (loop :for nterm :in (grammar-nterms grammar)
-                :if (nterm-used nterm)
-                  :collect nterm
+    (setf (grammar-nterminals grammar)
+          (loop :for nterminal :in (grammar-nterminals grammar)
+                :if (nterm-used nterminal)
+                  :collect nterminal
                 :else
-                  :do (push nterm unused)))
-    ;; Update terms, preserving EOF term (which is always first)
-    (let ((eof-term (first (grammar-terms grammar))))
-      (setf (grammar-terms grammar)
-            (cons eof-term
-                  (loop :for term :in (rest (grammar-terms grammar))
-                        :if (nterm-used term)
-                          :collect term
+                  :do (push nterminal unused)))
+    ;; Update terminals, preserving EOF terminal (which is always first)
+    (let ((eof-terminal (first (grammar-terminals grammar))))
+      (setf (grammar-terminals grammar)
+            (cons eof-terminal
+                  (loop :for terminal :in (rest (grammar-terminals grammar))
+                        :if (nterm-used terminal)
+                          :collect terminal
                         :else
-                          :do (push term unused)))))
+                          :do (push terminal unused)))))
     (setf (grammar-rules grammar)
           (loop :for rule :in (grammar-rules grammar)
                 :when (nterm-used (rule-left rule))
@@ -217,18 +217,18 @@ terminal).  Return list of unused terms/nterms."
 
 (defun remove-epsilon-rules (grammar)
   "Remove epsilon rules.  Actions are converted appropriately.
-Return alist NTERM -> EPSILON-ONLY-P where EPSILON-ONLY-P is true iff
-NTERM expands only to EPSILON or nothing.
+Return alist NTERMINAL -> EPSILON-ONLY-P where EPSILON-ONLY-P is true iff
+NTERMINAL expands only to EPSILON or nothing.
 
-This function may leave unused nterms.  Use DELETE-UNUSED-NTERM-RULES
+This function may leave unused nterminals.  Use DELETE-UNUSED-NTERM-RULES
 to remove them"
-  (let ((epsilon-terms (loop :for nterm :in (grammar-nterms grammar)
-                             :for first-set := (nterm-first nterm)
+  (let ((epsilon-terms (loop :for nterminal :in (grammar-nterminals grammar)
+                             :for first-set := (nterm-first nterminal)
                              :when (null (first first-set))
-                             :collect (cons nterm (null (rest first-set))))))
-    (dolist (nterm (grammar-nterms grammar))
-      (setf (nterm-rules nterm)
-            (loop :for rule :in (nterm-rules nterm)
+                             :collect (cons nterminal (null (rest first-set))))))
+    (dolist (nterminal (grammar-nterminals grammar))
+      (setf (nterm-rules nterminal)
+            (loop :for rule :in (nterm-rules nterminal)
                   :nconc (if (and (epsilon-rule-p rule)
                                   (not (eq +START+
                                            (nterm-name (rule-left rule)))))
@@ -238,7 +238,7 @@ to remove them"
     ;; TODO: do this optmization before +START+ is added.  Then order
     ;;       is not significant.
     (setf (grammar-rules grammar)
-          (loop :for nterm :in (grammar-nterms grammar)
-                :append (nterm-rules nterm)))
+          (loop :for nterminal :in (grammar-nterminals grammar)
+                :append (nterm-rules nterminal)))
     epsilon-terms))
 
