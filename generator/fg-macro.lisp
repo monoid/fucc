@@ -126,7 +126,7 @@
                          (,new-state-var
                           (cdr (assoc ,state-var
                                       (aref ,goto-table-var
-                                            (- ,nterminal-var ,(length (grammar-terminals grammar))))))))
+                                            (- ,nterminal-var ,(first-nterminal-id grammar)))))))
                     (assert ,new-state-var)
                     ,new-state-var))
               (first ,%/value/-var)
