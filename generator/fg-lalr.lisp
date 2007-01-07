@@ -157,11 +157,10 @@
 
 (defun calculate-rm-info (grammar)
   "Info about rightmost derivations"
-  (let ((nterminal-num (length (grammar-nterminals grammar)))
-        (terminal-num (length (grammar-terminals grammar))))
+  (let ((nterminal-num (length (grammar-nterminals grammar))))
     (dolist (nterminal (grammar-nterminals grammar))
       (let ((array (make-array nterminal-num :initial-element nil)))
-        (setf (aref array (- (nterm-id nterminal) terminal-num))
+        (setf (aref array (nterminal-id nterminal grammar))
               '(nil)) ; Or nil?
         (setf (rm-info nterminal) array)))
     (let ((set (grammar-nterminals grammar)))

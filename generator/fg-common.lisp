@@ -229,8 +229,7 @@
                   (pushnew (cons (item-index item)
                                  (item-index new-item))
                            (aref goto-table
-                                 (- (nterm-id nterm)
-                                    terminals-num))
+                                 (nterminal-id nterm grammar))
                            :test #'equal))))
       ;; Reduce or accept
       (dolist (item items)

@@ -90,6 +90,10 @@
    (id :accessor nterm-id :initarg :id)
    (is-terminal :accessor terminal-p :initarg :is-terminal :initform nil)))
 
+(declaim (inline nterminal-id))
+(defun nterminal-id (terminal grammar)
+  (- (nterm-id terminal) (first-nterminal-id grammar)))
+
 (defmethod nterm-name ((name null))
   nil)
 
