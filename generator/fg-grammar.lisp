@@ -31,7 +31,7 @@
 (defun init-env (terminals)
   "Populate table with TERMINALS.  Returns list of term objects and
 first ID of non-terminals."
-  (let ((terms (mapcar #'(lambda (term) (get-nterm term :is-term t))
+  (let ((terms (mapcar #'(lambda (term) (get-nterm term :is-terminal t))
                        terminals)))
     (values terms *grammar-next-id*)))
 
@@ -381,7 +381,7 @@ environment.  If found, return it; otherwise create new object."
                                  :collect nterm)
                           #'<
                           :key #'nterm-id)))
-        (let ((grammar (make-grammar :first-nterm-id first-nterm-id
+        (let ((grammar (make-grammar :first-nterminal-id first-nterm-id
                                      :rules proc-rules
                                      :terminals terminals
                                      :nterminals nterminals
