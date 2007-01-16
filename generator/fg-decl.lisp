@@ -92,7 +92,7 @@
 
 (declaim (inline nterminal-id))
 (defun nterminal-id (terminal grammar)
-  (- (nterm-id terminal) (first-nterminal-id grammar)))
+  (- (nterm-id terminal) 1 (first-nterminal-id grammar)))
 
 (defmethod nterm-name ((name null))
   nil)
