@@ -64,6 +64,10 @@
                                        "fg-common"
                                        "fg-lr0"
                                        "fg-lr"))
+                   (:file "fg-ll"
+                          :depends-on ("fg-package"
+                                       "fg-grammar"
+                                       "fg-common"))
                    (:file "fg-dump"
                           :depends-on ("fg-package"
                                        "fg-decl"
