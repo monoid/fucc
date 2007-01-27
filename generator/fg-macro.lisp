@@ -68,7 +68,8 @@
         (loop :for idx :from 0
               :for terminal :in (grammar-terminals grammar) :do
               (setf (nterm-id terminal) idx))
-        (loop :for idx :from (length (grammar-terminals grammar))
+        (setf (first-nterminal-id grammar) (length (grammar-terminals grammar)))
+        (loop :for idx :from (first-nterminal-id grammar)
               :for nterminal :in (grammar-nterminals grammar) :do
               (setf (nterm-id nterminal) idx))
         (renumber-rules grammar)
