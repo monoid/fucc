@@ -371,7 +371,7 @@ environment.  If found, return it; otherwise create new object."
                 (list (list +START+ '(:action (function identity))
                             initial))))
   (with-new-grammar-environment
-    (multiple-value-bind (terminals first-nterm-id)  (init-env terminals)
+    (multiple-value-bind (terminals first-nterminal-id)  (init-env terminals)
       (let* ((proc-rules (mapcar #'process-rule
                                  (expand-rules
                                   (mapcar #'generate-action rules))))
@@ -381,7 +381,7 @@ environment.  If found, return it; otherwise create new object."
                                  :collect nterm)
                           #'<
                           :key #'nterm-id)))
-        (let ((grammar (make-grammar :first-nterminal-id first-nterm-id
+        (let ((grammar (make-grammar :first-nterminal-id first-nterminal-id
                                      :rules proc-rules
                                      :terminals terminals
                                      :nterminals nterminals
