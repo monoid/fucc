@@ -26,7 +26,7 @@
    (exp (:action (lambda (a op b)
                      (funcall op a b)))
       exp
-      (:or (:or + -) ; Nested OR here is just for fun
+      (:or ((:or + -)) ; Nested OR here is just for fun
            * /)
       exp)
    ;; Constants and variables
