@@ -33,7 +33,7 @@
 first ID of non-terminals."
   (let ((terms (mapcar #'(lambda (term) (get-nterm term :is-terminal t))
                        terminals)))
-    (values terms *grammar-next-id*)))
+    (values terms (1+ *grammar-next-id*))))
 
 (defun get-nterm (name &key is-terminal)
   "If NAME is NIL, return NIL.  Otherwise look for NAME in
