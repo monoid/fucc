@@ -16,15 +16,17 @@ Each rule in RULES list is list.  First element is non-terminal
 action-description list (see below) and other elements (if any)
 are right side of the rule.
 
-RULE := (SYMBOL ACTION-DESCRIPTION &rest VAR-DESIGNATOR*)
-
-ACTION-DESCRIPTION := (:action FUNCTION)
-                   |  (:class CLASS)
-                   |  (:form LIST-OF-FORMS)
+RULE := (SYMBOL [DELIM VAR-DESIGNATOR*]+)
 
 VAL-DESIGNATOR := (:var SYMBOL RULE-EXP)
                |  (:initarg SYMBOL RULE-EXP)
                |  RULE-EXP
+               |  ACTION-DESCRIPTION
+
+ACTION-DESCRIPTION := (:call FUNCTION)
+                   |  (:class CLASS)
+                   |  (:do LIST-OF-FORMS)
+
 
 RULE-EXP       := (CL:* RULE-EXP)
                |  (CL:+ RULE-EXP)
@@ -32,7 +34,21 @@ RULE-EXP       := (CL:* RULE-EXP)
                |  (:LIST RULE-EXP RULE-EXP)
                |  SYMBOL
 
-It describes action performed when the rule is reduced.
+DELIM in one RULE is same symbol:
+
+  (a -> b c
+     -> k l m n)
+
+but not
+
+  (a -> b c
+     => k l m n)
+
+ACTION-DESCRIPTION describes action performed when the rule is reduced
+and intermediate actions.  If last VAL-DESIGNATOR is not an
+ACTION-DESCRIPTION, then default action description is inserted: it is
+(CONSTANTLY NIL) for epsilon-rules, #'IDENTITY for one-element rule
+and #'LIST for other rules.
 
 FUNCTION here is a form that evaluates to function designator.  For
 example:
@@ -42,22 +58,15 @@ example:
   #'identity
   (constantly "Mary had a little lamb")
 
-During reduction semantic values of right side are passed as arguments
-to the FUNCTION value.  Value of the expression is semantic value of
-reduced nonterminal.
-
 CLASS is symbol that denotes class name.  You must not quote it.
 
 LIST-OF-FORMS is list of forms.
-
-:ACTION-form is basic form.  :CLASS-form and :FORM-form are converted
-to it internally.
 
 :CLASS-form creates object of class CLASS, who's initargs are defined
 with :INITARG VAL-DESIGNATORs.  You can use :INITARG VAL-DESIGNATORs
 only with :CLASS-form.
 
-:FORM evaluates form with variables who's names are
+:DO evaluates form with variables who's names are
 symbols in :VAR VAL-DESIGNATORs bound in lexical context with values
 of semantic values of corresponding RULE-EXP.  You can use :VAR
 VAL-DESIGNATORs only with :FORM-form.
@@ -80,29 +89,29 @@ RULE-EXP is used.
 delimited by RULE-EXP2.  Semantic values aof RULE-EXP1 and RULE-EXP2
 are in same list.  For example:
 
-  (SEQ (...)
+  (SEQ ->
        (:LIST OPERATOR SEMICOLON))
 
 is equivalent to:
 
-  (SEQ (...)
+  (SEQ ->
        OPERATOR)
-  (SEQ (...)
+  (SEQ ->
        OPERATOR SEMICOLON OPERATOR)
-  (SEQ (...)
+  (SEQ ->
        OPERATOR SEMICOLON OPERATOR SEMICOLON OPERATOR)
   ... #| and so on |#
 
 Note that
-  (SEQ2 (...)
+  (SEQ2 ->
        (:LIST OPERATOR SEMICOLON) SEMICOLON)
 
 equals to
-  (SEQ2 (...)
+  (SEQ2 ->
        OPERATOR SEMICOLON)
-  (SEQ2 (...)
+  (SEQ2 ->
        OPERATOR SEMICOLON OPERATOR SEMICOLON)
-  (SEQ2 (...)
+  (SEQ2 ->
        OPERATOR SEMICOLON OPERATOR SEMICOLON OPERATOR SEMICOLON)
   ... #| and so on |#
 

@@ -15,27 +15,29 @@
   ;; List of terminal
   (+ - * / = :semicolon :id :const)
   ;; List of rules
-  ((s   (:form (format t "Value: ~S" (first (last exp-list))))
+  ((s ->
       (:var exp-list (:list exp :semicolon))
-      (:maybe :semicolon))
+      (:maybe :semicolon)
+      (:do (format t "Value: ~S" (first (last exp-list)))))
    ;; Assignment
-   (exp (:form (setf (gethash var *dictionary*)
-                       exp))
-      (:var var :id) = (:var exp exp))
-   ;; Binary operations
-   (exp (:action (lambda (a op b)
-                     (funcall op a b)))
-      exp
-      (:or ((:or + -)) ; Nested OR here is just for fun
-           * /)
-      exp)
-   ;; Constants and variables
-   (exp (:action #'identity)
-      :const)
-   (exp (:action (lambda (var)
-                   (or (gethash var *dictionary*)
-                       (error "Undefined variable: ~S" var))))
-      :id))
+   (exp -> (:var var :id) = (:var exp exp)
+           (:do (setf (gethash var *dictionary*)
+                      exp))
+        ;; Binary operations
+
+            -> exp
+           (:or ((:or + -)) ; Nested OR here is just for fun
+                * /)
+           exp
+           (:call (lambda (a op b)
+                    (funcall op a b)))
+        ;; Constants
+        -> :const
+        ;; and variables
+        ->  :id
+            (:call (lambda (var)
+                     (or (gethash var *dictionary*)
+                         (error "Undefined variable: ~S" var))))))
   :prec-info
   ((:right =) ;; Actually associativity doesn't matter here because
 	      ;; it is enforsed by rule structure anyway.

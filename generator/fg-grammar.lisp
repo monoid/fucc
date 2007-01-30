@@ -48,14 +48,26 @@ environment.  If found, return it; otherwise create new object."
                               :id (incf *grammar-next-id*)
                               :is-terminal is-terminal))))))
 
+(defun split-rule-form (rule-form)
+  "Convert rule form (A -> x -> y) into list ((A x) (A y))"
+  (destructuring-bind (left-nterminal delim &rest data) rule-form
+    (let ((left-sides (list nil)))
+      (dolist (token data)
+        (if (eq delim token)
+            (push () left-sides)
+            (push token (first left-sides))))
+      (mapcar #'(lambda (rest) (cons left-nterminal (nreverse rest)))
+              (nreverse left-sides)))))
+
 (defun process-rule (s-rule)
   "Process given rule and return RULE object."
-  (destructuring-bind (left args &rest right) s-rule
+  (destructuring-bind (left args main-action &rest right) s-rule
     (let ((left-nterm (get-nterm left))
           (right-nterms (mapcar #'get-nterm right)))
       (let ((rule (apply #'make-rule
                          :left left-nterm
                          :right right-nterms
+                         :action main-action
                          args)))
         (push rule
               (nterm-rules left-nterm))
@@ -82,93 +94,102 @@ environment.  If found, return it; otherwise create new object."
                 (setf (prec-assoc    rule) (prec-assoc    last-terminal)
                   (prec-priority rule) (prec-priority last-terminal)))))))
 
-(defun generate-action--class (lhs class rule-info rhs)
-  (let ((rev-arglist '())
-        (ignored '())
-        (m-o-args '()))
-    
-    ;; Gather information and create left side
-    (let ((new-right
-           (mapcar
-            #'(lambda (item)
-                (let ((arg (gensym)))
-                  (push arg rev-arglist)
-                  (if (and (consp item)
-                           (eq :initarg (first item)))
-                      (progn
-                        (assert (cddr item) nil
-                                "Slot clause is too short: ~S" item)
-                        (assert (not (cdddr item)) nil
-                                "Slot clause is too long: ~S" item)
-                        (push arg m-o-args) ; argument
-                        (push (list (quote quote)
-                                    (second item)) ; initarg
-                              m-o-args)
-                        (third item))
-                      (progn
-                        (push arg ignored)
-                        item))))
-            rhs)))
-      `(,lhs (:action #'(lambda (,@(nreverse rev-arglist))
-                           (declare (ignore ,@ignored))
-                           (make-instance ',class
-                                          ,@m-o-args))
-               ,@rule-info)
-        ,@new-right))))
+(defun expand-action--do (form rev-var-list rest)
+  `(:call (function (lambda ,(if (rest rest)
+                                 '() ; Arglist of non-primary actions in LR.
+                                 (reverse rev-var-list))
+            (declare (ignorable ,@rev-var-list))
+            ,@(rest form)))))
 
-(defun generate-action--form (lhs form rule-info rhs)
-  (let ((rev-arglist '()))
-    ;; Gather information and create left side
-    (let ((new-right
-           (mapcar
-            #'(lambda (item)
-                (if (and (consp item)
-                         (eq :var (first item)))
-                    (progn
-                      (assert (cddr item) nil
-                              "Var clause is too short: ~S" item)
-                      (assert (not (cdddr item)) nil
-                              "Var clause is too long: ~S" item)
-                      (push (second item) rev-arglist) ; var name
-                      (third item))
-                    (progn
-                      (push (gensym) rev-arglist)
-                      item)))
-            rhs)))
-      (let ((arglist (nreverse rev-arglist)))
-        `(,lhs (:action #'(lambda (,@arglist)
-                            (declare (ignorable ,@arglist))
-                            ,form)
-                ,@rule-info)
-          ,@new-right)))))
+(defun expand-action--class (form rhs rest rev-var-list rev-initarg-list)
+  (unless (null (rest rest))
+    (error "~S form ~S must be last in the clause: ~S" :class form rhs))
+  `(:call (function (lambda ,(reverse rev-var-list)
+            (declare (ignorable ,@rev-var-list))
+            (make-instance (quote ,(second form))
+                           ,@(reverse rev-initarg-list))))))
 
-(defun generate-action (rule)
-  (destructuring-bind (lhs (&rest rule-info
-                            &key (action nil action-p)
-                                 (form  nil form-p)
-                                 (class  nil class-p)
-                                 &allow-other-keys)
-                           &rest rhs)
-      rule
-    (declare (ignore action))
-    ;; Sanity check
-    (let ((count (count t (list action-p form-p class-p))))
-      (assert (>= 1 count) nil
-              "More than one action-related key is provided: ~S" rule-info)
-      (assert (= 1 count) nil
-              "Action-related keys are not provided: ~S~%One of ~{~S ~} is expected." rule-info '(:action :form :class)))
-    (cond
-      (class-p
-       (generate-action--class lhs class rule-info rhs))
-      (form-p
-       (generate-action--form lhs form rule-info rhs))
-      (action-p
-       `(,lhs ,rule-info ,@rhs))
-      (t
-       (error "Can't happen: checked earlier.")))))
+(defparameter +complex-attribute-form+
+  '(:do :class))
+
+(defparameter +attribute-form+
+  '(:do :class :call))
+
+(defun complex-attribute-form-p (form)
+  "True if form is non-primitive attribute form."
+  (and (consp form)
+       (member (first form) +complex-attribute-form+)))
+
+(defun attribute-form-p (form)
+  "True if form is any attribute form."
+  (and (consp form)
+       (member (first form) +attribute-form+)))
+
+(defun expand-action (rule)
+  (destructuring-bind (lhs &rest rhs) rule
+    (let ((exp-rhs (expand-rhs rhs)))
+      (let ((primary-action (second (first (last exp-rhs))))
+            (new-rhs (nbutlast exp-rhs)))
+        `(,lhs ,nil ,primary-action ,@new-rhs)))))
+      
+(defun expand-rhs (rhs)
+  (let ((var-list '())
+        (rev-initarg-list '()))
+    (nconc
+     (loop :for form :in rhs
+        :for rest :on rhs
+        :collect
+        (cond
+          ((complex-attribute-form-p form)
+           (ecase (first form)
+             ((:do)
+              (expand-action--do form var-list rest))
+             ((:class)
+              (expand-action--class form rhs rest var-list rev-initarg-list))))
+          ((consp form)
+           (case (first form)
+             ((:var)
+              ;; TODO: ASSERT is not proper form here
+              (assert (cddr form) nil
+                      "Var clause is too short: ~S" form)
+              (assert (not (cdddr form)) nil
+                      "Var clause is too long: ~S" form)
+              (push (second form) var-list)
+              (third form))
+             ((:initarg)
+              ;; TODO: ASSERT is not proper form here
+              (assert (cddr form) nil
+                      "Intarg clause is too short: ~S" form)
+              (assert (not (cdddr form)) nil
+                      "Init-Env clause is too long: ~S" form)
+              (let ((var (gensym)))
+                (push (second form)
+                      rev-initarg-list)
+                (push var
+                      rev-initarg-list)
+                (push var var-list)
+                (third form)))
+             (t
+              (let ((var (gensym)))
+                (push var var-list)
+                form))))
+          (t
+           (let ((var (gensym)))
+             (push var var-list)
+             form))))
+     ;; Primary action
+     (cond
+       ((null rhs)
+        '((:call (constantly nil))))
+       ((not (attribute-form-p (first (last rhs))))
+        (if (rest rhs)
+            '((:call (function list)))
+            '((:call (function identity)))))
+       (t
+        '())))))
 
 (defparameter +complex-forms+
-  '(:* * :+ + :maybe :list))
+  '(:* * :+ + :maybe :list :call))
 
 ;;;  Transform complex forms like "(:+ a)" into 3 values:
 ;;;
@@ -187,31 +208,41 @@ environment.  If found, return it; otherwise create new object."
         (generated-sym1 (gensym)))
     (ecase (first form)
       ((:* *)
-       (push `(,generated-sym1 (:action #'(lambda (cdr &rest car) ; Twisted!
-                                            (append (reverse car) cdr)))
-               ,generated-sym1 ,@(rest form))
+       (push `(,generated-sym1 nil
+               ,generated-sym1 ,@(rest form)
+               #'(lambda (cdr &rest car) ; Twisted!
+                          (append (reverse car) cdr)))
              generated-rules)
-       (push `(,generated-sym1 (:action (constantly nil))
-               ) ; empty
+       (push `(,generated-sym1 nil 
+               (constantly nil)
+               ;; empty
+               )
              generated-rules)
        (values generated-sym1 generated-rules 'common-lisp:reverse))
       ((:+ +)
-       (push `(,generated-sym1 (:action #'(lambda (cdr &rest car) ; Twisted!
-                                            (append (reverse car) cdr)))
+       (push `(,generated-sym1 nil
+               #'(lambda (cdr &rest car) ; Twisted!
+                   (append (reverse car) cdr))
                ,generated-sym1 ,@(rest form))
              generated-rules)
-       (push `(,generated-sym1 (:action #'list)
+       (push `(,generated-sym1 nil
+               #'list
                ,@(rest form))
              generated-rules)
        (values generated-sym1 generated-rules 'common-lisp:reverse))
       ((:maybe)
-       (push (if (cddr form)
-                 `(,generated-sym1 (:action #'list)
-                   ,@(rest form))
-                 `(,generated-sym1 (:action #'identity)
+       (push (if (cddr form) ; Nested form is a list
+                 `(,generated-sym1 nil
+                   #'list
+                  ,@(rest form) )
+                 `(,generated-sym1 nil
+                   #'identity
                    ,(second form)))
              generated-rules)
-       (push `(,generated-sym1 (:action (constantly nil)))
+       (push `(,generated-sym1 nil
+               (constantly nil)
+               ;; Empty
+               )
              generated-rules)
        (values generated-sym1 generated-rules nil))
       ((:list)
@@ -219,15 +250,24 @@ environment.  If found, return it; otherwise create new object."
          ;; Variable names in lambda are meaningless, but from
          ;; COMMON-LISP package.  This avoids "package FUCC-GENERATOR
          ;; not found" when loading FASLs with debug info.
-         (push `(,generated-sym1 (:action #'(lambda (list cons car)
-                                              (declare (ignore cons))
-                                              (cons car list)))
+         (push `(,generated-sym1 nil
+                 #'(lambda (list cons car)
+                            (declare (ignore cons))
+                            (cons car list))
                  ,generated-sym1 ,delim ,item)
                generated-rules)
-         (push `(,generated-sym1 (:action #'list)
+         (push `(,generated-sym1 nil
+                 #'list
                  ,item)
                generated-rules)
-         (values generated-sym1 generated-rules 'common-lisp:reverse))))))
+         (values generated-sym1 generated-rules 'common-lisp:reverse)))
+      ((:call)
+       (push `(,generated-sym1 nil
+               (:call ,(second form))
+               ;; Empty
+               )
+             generated-rules)
+       (values generated-sym1 generated-rules nil)))))
 
 (defparameter +inlineable-forms+
   '(:or or))
@@ -257,19 +297,22 @@ environment.  If found, return it; otherwise create new object."
          ;; Rest of short subforms are inserted into new rules:
          ;; subform replaces inlinable form in original rule.
          (let* ((rule-left (first rule))
-                (rule-action (second rule))
-                (rule-right (cddr rule))
+                (rule-meta (second rule))
+                (rule-action (third rule))
+                (rule-right (cdddr rule))
                 (new-form (first short-subforms))
                 (new-rules
                  (loop :for or-clause :in (rest short-subforms)
-                       :collect `(,rule-left ,rule-action
+                       :collect `(,rule-left ,rule-meta
+                                   ,rule-action
                                    ;; Short subform replaces inlinable
                                    ;; form
                                   ,@(replace (copy-list rule-right)
                                              (list or-clause)
                                              :start1 pos :end1 (1+ pos))))))
            (dolist (subform long-subforms)
-             (push `(,generated-sym1 (:action #'list)
+             (push `(,generated-sym1 nil
+                     #'list
                      ,@subform)
                    new-rules))
            ;; First short subform happens to be complex form, it is
@@ -293,67 +336,65 @@ environment.  If found, return it; otherwise create new object."
              +inlineable-forms+)
      (expand-inlinable-form form rule pos))))
 
-(defun apply-argument-transforms (transforms rule-params)
-  (destructuring-bind (&key action &allow-other-keys) rule-params
-    (assert action nil
-            "CAN'T HAPPEN: :ACTION is not found in ~S" rule-params)
-    ;; Analyze the action
-    (loop :for tr :in transforms
-          :for arg := (gensym)
-          :collect arg :into new-arglist
-          :collect (if tr
-                       `(,tr ,arg)
-                       arg)
-          :into arguments
-          :finally (return
-                     (list*
-                      :action
-                      (if (and (eq 'function (first action))
-                               (not
-                                (and
-                                 (consp (second action))
-                                 (eq 'setf (first (second action))))))
-                          ;; Function name or lambda expression
-                          `(function
-                            (lambda ,new-arglist
-                             (,@(rest action)
-                               ,@arguments)))
-                          `(function
-                            (lambda ,new-arglist
-                             (funcall ,action ,@arguments))))
-                      rule-params)))))
+(defun apply-argument-transforms-to-action (transforms action)
+  "Apply TRANSFORMS to ACTION"
+  ;; Create new action
+  (loop :for tr :in transforms
+     :for arg := (gensym)
+     :collect arg :into new-arglist
+     :collect (if tr
+                  `(,tr ,arg)
+                  arg)
+     :into arguments
+     :finally (return
+                (if (and (eq 'function (first action))
+                         (not
+                          (and
+                           (consp (second action))
+                           (eq 'setf (first (second action))))))
+                    ;; Function name or lambda expression
+                    `(function
+                      (lambda ,new-arglist
+                       (,@(rest action)
+                          ,@arguments)))
+                    `(function
+                      (lambda ,new-arglist
+                       (funcall ,action ,@arguments)))))))
 
 (defun expand-rules* (expander prefix-set rules)
+  "Apply EXPANDER to forms starting with atoms in PREFIX-SET to all RULES."
   (mapcan
    #'(lambda (rule)
        (let ((more-rules ())
              (transforms nil))
          (let* ((rhs-expand
-                 (loop :for form :in (cddr rule)
-                       :for pos :from 0
-                       :if (and (consp form)
-                                (member (first form)
-                                        prefix-set
-                                        :test #'eq))
-                       :collect
-                       (multiple-value-bind (new-nterm new-rules transform)
-                           (funcall expander form rule pos)
-                         (push transform transforms)
-                         (setf more-rules
-                               (nconc more-rules
-                                      (expand-rules new-rules)))
-                         new-nterm)
-                       :else
-                       :do (push nil transforms)
-                       :and :collect form
-                       :end)))
+                 ;; Calculate new rhs and collect transforms into TRANSFORMS
+                 (loop :for form :in (cdddr rule)
+                    :for pos :from 0
+                    :if (and (consp form)
+                             (member (first form)
+                                     prefix-set
+                                     :test #'eq))
+                    :collect
+                    (multiple-value-bind (new-nterm new-rules transform)
+                        (funcall expander form rule pos)
+                      (push transform transforms)
+                      (setf more-rules
+                            (nconc more-rules
+                                   (expand-rules new-rules)))
+                      new-nterm)
+                    :else
+                    :do (push nil transforms)
+                    :and :collect form
+                    :end)))
            (setf transforms (nreverse transforms))
            (list*
             `(,(first rule)
-                   ,(if (some #'identity transforms)
-                        (apply-argument-transforms transforms (second rule))
-                        (second rule))
-              ,@rhs-expand)
+               ,(second rule)
+               ,(if (some #'identity transforms)
+                    (apply-argument-transforms-to-action transforms (third rule))
+                    (third rule))
+               ,@rhs-expand)
             more-rules))))
    rules))
 
@@ -365,16 +406,19 @@ environment.  If found, return it; otherwise create new object."
                                rules)))
 
 (defun parse-grammar (initial terminals rules &key prec-info)
+  ;; Add EOF mark
   (push +EOF+ terminals)
+  ;; Add artifical start rule
   (setf rules
         (append rules
-                (list (list +START+ '(:action (function identity))
-                            initial))))
+                (list `(,+START+ #:-> ,initial (:call (function identity))))))
   (with-new-grammar-environment
-    (multiple-value-bind (terminals first-nterminal-id)  (init-env terminals)
+    (multiple-value-bind (terminals first-nterminal-id)
+        (init-env terminals) ;; Terminals added here
       (let* ((proc-rules (mapcar #'process-rule
                                  (expand-rules
-                                  (mapcar #'generate-action rules))))
+                                  (mapcar #'expand-action
+                                          (mapcan #'split-rule-form rules)))))
              (nterminals (sort (loop :for nterm
                                  :being :each :hash-value :of *grammar-environment*
                                  :when (not (terminal-p nterm))
