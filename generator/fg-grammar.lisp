@@ -51,6 +51,8 @@ environment.  If found, return it; otherwise create new object."
 (defun split-rule-form (rule-form)
   "Convert rule form (A -> x -> y) into list ((A x) (A y))"
   (destructuring-bind (left-nterminal delim &rest data) rule-form
+    (when (find-if #'alpha-char-p (symbol-name delim))
+      (warn "Delimiter ~S with alphabetic character in rule group ~S" delim rule-form))
     (let ((left-sides (list nil)))
       (dolist (token data)
         (if (eq delim token)
