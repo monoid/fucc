@@ -26,6 +26,7 @@
   (:export
    #:defparser
    #:parser-lr
+   #:parser-ll
    #:use-value
    #:use-action
    #:skip-token

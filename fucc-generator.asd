@@ -1,5 +1,5 @@
 #| -*- mode: lisp; -*-
- Copyright (c) 2006 Ivan Boldyrev
+ Copyright (c) 2006-2007 Ivan Boldyrev
                                              
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
@@ -34,10 +34,21 @@
                    (:file "fg-decl"
                           :depends-on ("fg-package"
                                        "fg-util"))
+                   (:file "fg-grammar-lr"
+                          :depends-on ("fg-package"
+                                       "fg-decl"
+                                       "fg-util"))
+                   (:file "fg-grammar-ll"
+                          :depends-on ("fg-package"
+                                       "fg-decl"
+                                       "fg-util"
+                                       "fg-grammar-lr"))
                    (:file "fg-grammar"
                           :depends-on ("fg-package"
                                        "fg-decl"
-                                               "fg-util"))
+                                       "fg-util"
+                                       "fg-grammar-lr"
+                                       "fg-grammar-ll"))
                    (:file "fg-transform"
                           :depends-on ("fg-package"
                                        "fg-decl"
@@ -77,6 +88,7 @@
                           :depends-on ("fg-package"
                                        "fg-decl"
                                        "fg-grammar"
+                                       "fg-grammar-lr"
                                        "fg-common"
                                        "fg-transform"
                                        "fg-lr0"

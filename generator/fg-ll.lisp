@@ -23,36 +23,33 @@
 
 (cl:in-package #:fucc-generator)
 
-(defstruct ll-rule
-  (actions)
-  (nterms))
+(defun filter-rule (rule-right grammar)
+  "Transform nterm objects into their codes (negative for non-terminals)."
+  (mapcar #'(lambda (nterm)
+              (if (terminal-p nterm)
+                  (nterm-id nterm)
+                  (fucc::nt->negative (nterminal-id nterm grammar))))
+          rule-right))
 
-
-(defun stack-popper (n)
-  (lambda (data-stack action-stack)
-    (pop-n-stack data-stack action-stack n)))
-
-;;; TODO: There is similar function in LR parsing: nsplit-list
-(defun pop-n-stack (data-stack action-stack n)
-  (let ((result '()))
-    (loop :repeat n :do
-       (push (pop data-stack) result))
-    (push result data-stack)
-    ;; Recursive call to parent rule action
-    (funcall (first action-stack) data-stack (rest action-stack))))
-
-(defun identity-stack (data-stack action-stack)
-  (values data-stack action-stack))
-
-(defun rule->ll-rule (rule)
-  (make-ll-rule :nterms (reverse (rule-right rule))
-                :actions (nreverse
-                          (loop
-                             :for rest :on (rule-right rule)
-                             :for len  :from 1
-                             :collect (if (null (rest rest))
-                                          (stack-popper len)
-                                          #'identity-stack)))))
+(defun rule->ll-rule (rule grammar)
+  (cons
+   (reverse
+    (filter-rule (rule-right rule) grammar))
+   (if (null (rule-right rule))
+       `(fucc::ll-final-action 0 ,(rule-action rule))
+       (list*
+        'list
+        ;; Initial action
+        `(fucc::ll-middle-action 0 ,(rule-init-action rule))
+        ;; Middle actions
+        (nreverse
+         (loop
+            :for rest :on (rule-right rule)
+            :for action :in (rule-middle-actions rule)
+            :for len  :from 1
+            :collect (if (null (rest rest))
+                         `(fucc::ll-final-action ,len ,(rule-action rule))
+                         `(fucc::ll-middle-action ,len ,action))))))))
 
 (defun make-ll-table (grammar)
   "Generate LL table where each cell may contain list of possible
@@ -69,8 +66,8 @@ tables."
           (dolist (termnl first-set)
             (if (null termnl)
                 ;; Epsilon derivation is possible.  Use FOLLOW set
-                (dolist (termnl-follow (rule-left rule))
-                  ;; We use PUSHNEW here becase rule may be addet two
+                (dolist (termnl-follow (nterm-follow (rule-left rule)))
+                  ;; We use PUSHNEW here becase rule may be added two
                   ;; times: as epsilon rule and as ordinary rule.  It
                   ;; is conflict, but it implicit one.  It is always
                   ;; demonstrated somewhere else explicitly.
@@ -85,7 +82,7 @@ tables."
                                (nterm-id termnl)))))))
       table)))
 
-(defun convert-to-deterministic-ll-table (table)
+(defun convert-to-deterministic-ll-table (table grammar)
   (dotimes (nterminal (array-dimension table 0))
     (dotimes (terminal (array-dimension table 1))
       (let ((value (aref table nterminal terminal)))
@@ -96,43 +93,37 @@ tables."
            (error "Cannot resolve LL conflict: ~S" value))
           (t
            (setf #1=(aref table nterminal terminal)
-                 (rule->ll-rule (first #1#))))))))
+                 (rule->ll-rule (first #1#) grammar)))))))
   table)
 
-;;; TODO: Consider redesign.  Instead of stacks use stack of stacks,
-;;; where each stack on stack corresponds to rule in process.
-;;; Now this structure is kept in actions, perhaps, keeping it in CONS
-;;; structure may be more optimal.
-(defun parse-ll (lexer ll-table grammar)
-  (let ((nterm-stack (list (first (grammar-nterminals grammar))
-                           (first (grammar-terminals grammar))))
-        (data-stack '())
-        (action-stack (list (lambda (data-stack action-stack)
-                              (declare (ignore action-stack))
-                              (return-from parse-ll (first data-stack))))))
-    (loop
-       (multiple-value-bind (tid data) (funcall lexer)
-         ;; Do all possible rule expansions.
-         (loop :until (terminal-p (first nterm-stack)) :do
-            (let* ((nonterm (pop nterm-stack))
-                   (ll-rule (aref ll-table (nterminal-id nonterm grammar) tid)))
-              (loop
-                 :for nterm :in (ll-rule-nterms ll-rule) :do
-                 (push nterm nterm-stack))
-              (loop
-                 :for action :in (ll-rule-actions ll-rule) :do
-                 (push action action-stack))))
-         
-         ;; Now there is either terminal or EOF on stack
-         (if (equal tid
-                    ;; TODO: NTERM-ID is wrong here (EOF is NIL!)
-                    (nterm-id (first nterm-stack)))
-             (progn
-               (pop nterm-stack)
-               (push data data-stack)
-               ;; If we have complete, non-local exit is performed from action
-               (multiple-value-setq (data-stack action-stack)
-                 (funcall (first action-stack) data-stack (rest action-stack))))
-             (error "LL parse error: ~S expected, ~S found"
-                    (first nterm-stack)
-                    tid))))))
+(defun det-ll-table->list-ll-parser-data (table)
+  `(make-array
+    ',(array-dimensions table)
+    :initial-contents
+    (list
+     ,@(loop
+          :for nterminal :from 0 :below (array-dimension table 0)
+          :collect 
+          (cons 'list
+                (loop
+                   :for terminal :from 0 :below (array-dimension table 1)
+                   :for (rule . action) := (aref table nterminal terminal)
+                   :if (aref table nterminal terminal)
+                   :collect `(cons ',rule ,action)
+                   :else
+                   :collect nil))))))
+
+(defun make-deterministic-ll-parser-data (table grammar)
+  `(list
+    ,(det-ll-table->list-ll-parser-data
+       (convert-to-deterministic-ll-table table grammar))
+    ,(fucc::nt->negative (nterminal-id (first (grammar-nterminals grammar))
+                                       grammar))
+    ,(nterm-id (first (grammar-terminals grammar)))
+    (fucc::alist-to-hash-table
+     ',(loop
+          :for term :in (grammar-terminals grammar)
+          :if (eq +EOF+ (nterm-name term))
+          :collect (cons nil (nterm-id term))
+          :else
+          :collect (cons (nterm-name term) (nterm-id term))))))

@@ -58,6 +58,12 @@
           :accessor rule-production
           :initarg :right
           :documentation "Right-hand side: list of terms")
+   (init-action :accessor rule-init-action
+                :initarg :init-action
+                :documentation "Action executed when rule is expanded.")
+   (middle-actions :accessor rule-middle-actions
+                   :initarg :middle-actions
+                   :documentation "List of middle actions")
    (length :reader rule-length
            :documentation "Cached length of right-hand side")
    (index :accessor rule-index :initarg :index)

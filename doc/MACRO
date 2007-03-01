@@ -47,8 +47,8 @@ but not
 ACTION-DESCRIPTION describes action performed when the rule is reduced
 and intermediate actions.  If last VAL-DESIGNATOR is not an
 ACTION-DESCRIPTION, then default action description is inserted: it is
-(CONSTANTLY NIL) for epsilon-rules, #'IDENTITY for one-element rule
-and #'LIST for other rules.
+(CONSTANTLY NIL) for epsilon-rules, #'IDENTITY for one-element (middle
+actions are ingored) rule and #'LIST for other rules.
 
 FUNCTION here is a form that evaluates to function designator.  For
 example:
@@ -138,7 +138,7 @@ first.
 
 * :TYPE
 
-Parser type: :LALR (default), :LR (aka :LR1), :LR0, :SLR.
+Parser type: :LALR (default), :LR (aka :LR1), :LR0, :SLR and :LL .
 
 * :LEXER-OPTIONS
 

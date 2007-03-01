@@ -198,19 +198,19 @@
 (defun get-epsilon-reductions (lrpoint lahead grammar)
   "Epsilon reductions that can happen for the LRPOINT and LAHEAD"
   (let ((nterm (nterm-at-pos lrpoint)))
-    (if (or (not nterm) (terminal-p nterm))
+    (if (or (null nterm) (terminal-p nterm))
         nil
         (let ((accumulator ())
               (rm-info (rm-info nterm)))
-          (loop :for i :from 0 :below (array-dimension rm-info 0)
+          (loop :for rm :across rm-info
                 :for nterminal :in (grammar-nterminals grammar) :do
                 (let ((first-set (combine-first-sets
-                                  (aref rm-info i)
+                                  rm
                                   (seq-first
                                    (nthcdr (1+ (lrpoint-pos lrpoint))
                                            (rule-right (lrpoint-rule lrpoint))))
                                   lahead)))
-                  (loop :for rule :in (nterminal-epsilon-rules nterm) :do
+                  (loop :for rule :in (nterminal-epsilon-rules nterminal) :do
                         (loop :for terminal :in first-set :do
                               (push (cons rule (list terminal))
                                     accumulator)))))

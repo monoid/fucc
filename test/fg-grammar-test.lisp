@@ -18,13 +18,58 @@
   ((s a b c (:do (print 'abc)))
    (s (:do (print 'car)) c a r)))
 
+(rt:deftest (fucc-generator::split-rule-form :warn)
+    (block nil
+      (handler-bind ((warning #'(lambda (&rest ingore)
+                                  (declare (ignore ingore))
+                                  (return :warn))))
+        (fucc-generator::split-rule-form '(s a b c))))
+  :warn)
+
+(rt:deftest (fucc-generator::split-rule-form :nowarn)
+    (block nil
+      (handler-bind ((warning #'(lambda (&rest ingore)
+                                  (declare (ignore ingore))
+                                  (return :warn))))
+        (fucc-generator::split-rule-form '(s -> a b c))))
+  ((s a b c)))
+
 (rt:deftest (fucc-generator::expand-action :simple)
     (fucc-generator::expand-action '(s  a b c (:call (function +))))
   ;; Result
   (s () (function +) a b c))
 
-(rt:deftest (fucc-generator::expand-action :insert-action)
-    (fucc-generator::expand-action '(s  a b c))
+(rt:deftest (fucc-generator::expand-action :insert-action-0)
+    (fucc-generator::expand-action '(s))
+  ;; Result
+  (s () (constantly nil)))
+
+(rt:deftest (fucc-generator::expand-action :insert-action-1)
+    (fucc-generator::expand-action '(s a))
+  ;; Result
+  (s () (function identity) a))
+
+(rt:deftest (fucc-generator::expand-action :insert-action-1-with-do)
+    (fucc-generator::expand-action '(s (:do nil) a))
+  ;; Result
+  (s () (function identity)
+     (:call (function (lambda () (declare (ignorable)) nil)))
+     a))
+
+(rt:deftest (fucc-generator::expand-action :insert-action-1-with-call)
+    (fucc-generator::expand-action '(s (:call (constantly 0)) a))
+  ;; Result
+  (s () (function identity)
+     (:call (constantly 0))
+     a))
+
+(rt:deftest (fucc-generator::expand-action :insert-action-2)
+    (fucc-generator::expand-action '(s a b))
+  ;; Result
+  (s () (function list) a b))
+
+(rt:deftest (fucc-generator::expand-action :insert-action-3)
+    (fucc-generator::expand-action '(s a b c))
   ;; Result
   (s () (function list) a b c))
 

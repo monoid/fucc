@@ -33,6 +33,8 @@
                 (:file "fucc-util"
                        :depends-on ("fucc-package" "fucc-decl"))
                 (:file "fucc-parser"
-                       :depends-on ("fucc-package" "fucc-decl" "fucc-util"))))))
+                       :depends-on ("fucc-package" "fucc-decl" "fucc-util"))
+                (:file "fucc-ll"
+                       :depends-on ("fucc-package"))))))
 
 ; (asdf:operate 'asdf:load-op :fucc-parser)
