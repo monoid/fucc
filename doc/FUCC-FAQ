@@ -3,7 +3,8 @@
 1. What is FUCC?
 2. What does the name mean?
 2a. What is FU?
-4. Do you plan implementing other parsing algorithms?
+3. What kind of parsers are supported?
+4. What kind of parsers do you plan to implement?
 
 
 1. What is FUCC?
@@ -21,11 +22,17 @@
    Deliberately nothing.
 
 
-3. Do you plan implementing other parsing algorithms?
+3. What kind of parsers are supported?
 
-   Yes, I plan to add GLR and LL parsing.  Early, CYK and other
-   parsers too.
+   Current version of FUCC implements LL (Strong-LL) parser and
+   LR-related parsers: LR1, LALR, LR0, SLR.
 
-   Then FUCC will be universal parser toolkit for Common Lisp.
+
+4. What kind of parser do you plan to implement?
+
+   I plan to add GLR parsing.  Perhaps, Early, CYK and other parsers
+   too.
+
+   Then FUCC will be world-dominating parser toolkit for Common Lisp.
 
 ;;; LocalWords:  FUCC LLGPL

@@ -2,9 +2,16 @@
 
 * Lexer
 
-Lexer is a function with zero or one argument (if LEXER-OPTION of
-DEFPARSER contains :CONTEXT) that returns two values: token id as
-symbol and semantic information (any Lisp object).  NIL as token id is
-sign of end of input stream, its semantic value is ignored.
+Lexer is a function of zero arguments or, when LEXER-OPTION of
+DEFPARSER contains :CONTEXT, of one argument. The function returns two
+values: token id as symbol and semantic information (any Lisp object).
+NIL as a token id is a sign of end of input stream.  Its semantic
+value is ignored.
+
+If :LEXER-OPTION contains :CONTEXT, function's argument is a list of
+symbols that do not lead to immediate error in current context.  LL
+parser do not support this option yet.  For accurate results you have
+to use LR(1) (LALR, LR0 and SLR may give false positives: tokens that
+do not lead to error immediately, but after some reductions).
 
 ;; LocalWords:  fixnum

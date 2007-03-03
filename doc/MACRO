@@ -1,27 +1,35 @@
--*- mode: outline; -*-
+-*- mode: outline; ispell-local-dictionary: "english" -*-
 
-Macro FUCC:DEFPARSER variable initial (&rest terminals) (&rest rules)
-                     &key reserved-terminals
-                          prec-info
-                          (type :lalr)
-                          lexer-options
+Macro FUCC:DEFPARSER VARIABLE
+                     INITIAL
+                     (&rest TERMINALS)
+                     (&rest LIST-OF-RULE-GROUPS)
+                     &key RESERVED-TERMINALS
+                          PREC-INFO
+                          (TYPE :lalr)
+                          LEXER-OPTIONS
 
-Defines parser who's data is stored in VARIABLE that is declared
-special with DEFPARAMETER.  INITIAL is symbol: initial nonterminal.
-TERMINALS is list of terminals that parser can accept.  Other symbols
-are treated as nonterminals.  RULES is list of rules in arbitrary order.
+The macro defines special VARIABLE (with DEFPARAMETER) where parser's
+tables are stored.  INITIAL is symbol that designated initial
+nonterminal.  TERMINALS is list of terminals that parser can accept
+(they are returned by lexer).  Other symbols in rules are treated as
+non-terminals.  LIST-OF-RULE-GROUPS is list of rule groups.
 
-Each rule in RULES list is list.  First element is non-terminal
-(symbol that is member of TERMINALS list), second is
-action-description list (see below) and other elements (if any)
-are right side of the rule.
+RULE-GROUP may describe one rule or some rules with same left side.
 
-RULE := (SYMBOL [DELIM VAR-DESIGNATOR*]+)
+  ;; One rule A -> B C
+  (A -> B C)
+
+  ;; Three rules: A -> B C,  A-> epsilon and A -> D.
+  (A -> B C          
+     ->      ; Empty!
+     -> D)
+
+RULE-GROUP := (SYMBOL [DELIM [VAR-DESIGNATOR* ACTION-DESCRIPTION?]]+)
 
 VAL-DESIGNATOR := (:var SYMBOL RULE-EXP)
                |  (:initarg SYMBOL RULE-EXP)
                |  RULE-EXP
-               |  ACTION-DESCRIPTION
 
 ACTION-DESCRIPTION := (:call FUNCTION)
                    |  (:class CLASS)
@@ -32,9 +40,17 @@ RULE-EXP       := (CL:* RULE-EXP)
                |  (CL:+ RULE-EXP)
                |  (:MAYBE RULE-EXP)
                |  (:LIST RULE-EXP RULE-EXP)
+               |  (:OR RULE-EXP+)
                |  SYMBOL
 
-DELIM in one RULE is same symbol:
+First element of RULE-GROUP is a non-terminal (symbol that is not
+member of TERMINALS list), and other elements (if any) are right side
+of the rule.
+
+DELIM is a symbol that separates right side of rules.  Left side is
+same for all rules in group: it is a first element of a RULE-GROUP.
+DELIM may be different symbol in different rule groups, but the
+separator is same within one group.  Write
 
   (a -> b c
      -> k l m n)
@@ -44,11 +60,21 @@ but not
   (a -> b c
      => k l m n)
 
+If separator contains alpha character (a-z) or digit, warning is
+issued.  It helps to prevent errors like lost separator:
+
+  (a b c             ; Warning is issued here
+     -> k l m n )
+
 ACTION-DESCRIPTION describes action performed when the rule is reduced
-and intermediate actions.  If last VAL-DESIGNATOR is not an
-ACTION-DESCRIPTION, then default action description is inserted: it is
-(CONSTANTLY NIL) for epsilon-rules, #'IDENTITY for one-element (middle
-actions are ingored) rule and #'LIST for other rules.
+and intermediate actions.  If last VAL-DESIGNATOR is not followed by
+an ACTION-DESCRIPTION, then default final action description is
+inserted: it is (CONSTANTLY NIL) for epsilon-rules, #'IDENTITY for
+one-element (middle actions are ingored) rule and #'LIST for other
+rules.
+
+Value of final ACTION-DESCRIPTION (default or explicit) is treated as
+semantic value of the rule.
 
 FUNCTION here is a form that evaluates to function designator.  For
 example:
@@ -64,12 +90,13 @@ LIST-OF-FORMS is list of forms.
 
 :CLASS-form creates object of class CLASS, who's initargs are defined
 with :INITARG VAL-DESIGNATORs.  You can use :INITARG VAL-DESIGNATORs
-only with :CLASS-form.
+only with :CLASS-form.  Class form may be final (at end of rule right
+side) action form only.
 
-:DO evaluates form with variables who's names are
-symbols in :VAR VAL-DESIGNATORs bound in lexical context with values
-of semantic values of corresponding RULE-EXP.  You can use :VAR
-VAL-DESIGNATORs only with :FORM-form.
+:DO evaluates form with variables who's names are symbols in :VAR
+VAL-DESIGNATORs bound in lexical context with values of semantic
+values of corresponding RULE-EXP.  You can use :VAR VAL-DESIGNATORs
+only with :DO-form.  (:DO form is like PROGN in usual Lisp programs).
 
 Rules can be more complex than list of terminals/nonterminals: it can
 contain repetition operators like +, *, :LIST and :MAYBE for optional
@@ -78,8 +105,8 @@ items.
 Rule expression (CL:* RULE-EXP) returns list of RULE-EXP as semantic
 value.  It matches 0 or more repetitions of RULE-EXP.
 
-Rule expression (CL:+ RULE-EXP) is similar to CL:*, but minimal number
-of elements is 1.
+Rule expression (CL:+ RULE-EXP) is similar to CL:*, but matches 1 or
+more repetitions of RULE EXP.
 
 (:MAYBE RULE-EXP) defines optional elements.  If RULE-EXP doesn't
 match, NIL is returned as semantic value, otherwise semantic value of
@@ -89,8 +116,7 @@ RULE-EXP is used.
 delimited by RULE-EXP2.  Semantic values aof RULE-EXP1 and RULE-EXP2
 are in same list.  For example:
 
-  (SEQ ->
-       (:LIST OPERATOR SEMICOLON))
+  (SEQ -> (:LIST OPERATOR SEMICOLON))
 
 is equivalent to:
 
@@ -103,10 +129,11 @@ is equivalent to:
   ... #| and so on |#
 
 Note that
-  (SEQ2 ->
-       (:LIST OPERATOR SEMICOLON) SEMICOLON)
+
+  (SEQ2 -> (:LIST OPERATOR SEMICOLON) SEMICOLON)
 
 equals to
+
   (SEQ2 ->
        OPERATOR SEMICOLON)
   (SEQ2 ->
@@ -115,7 +142,7 @@ equals to
        OPERATOR SEMICOLON OPERATOR SEMICOLON OPERATOR SEMICOLON)
   ... #| and so on |#
 
-Such expression must be used with caution: they can introduce
+Such expressions must be used with caution: they can introduce
 conflicts.
 
 Keywords:
@@ -138,11 +165,12 @@ first.
 
 * :TYPE
 
-Parser type: :LALR (default), :LR (aka :LR1), :LR0, :SLR and :LL .
+Parser type: :LL, :LALR (default), :LR (aka :LR1), :LR0 and :SLR.
 
 * :LEXER-OPTIONS
 
 List of options.  Currently only one option is available: :CONTEXT.
-So, value is either empty list (default) or '(:CONTEXT).
+So, valid value is either empty list (default) or '(:CONTEXT).  See
+file LEXER for more info.
 
 ;; LocalWords:  LALR

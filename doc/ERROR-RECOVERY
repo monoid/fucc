@@ -6,6 +6,9 @@ FUCC signals about different problems (input errors, shift/reduce or
 reduce/reduce conflicts).  You can continue parsing with different
 restarts.  See Common Lisp HyperSpec, 9.1 Conditions.
 
+The text below defines error recovery model for LR-related parsers
+(LR1, LALR, LR0, SLR).
+
 ** Conditions
 
 *** FUCC:PARSE-ERROR-CONDITION
