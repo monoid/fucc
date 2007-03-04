@@ -46,9 +46,9 @@
     (ecase (first form)
       ((:* *)
        (push `(,generated-sym1 nil
-               ,generated-sym1 ,@(rest form)
                #'(lambda (cdr &rest car) ; Twisted!
-                          (append (reverse car) cdr)))
+                          (append (reverse car) cdr))
+               ,generated-sym1 ,@(rest form))
              generated-rules)
        (push `(,generated-sym1 nil 
                (constantly nil)
