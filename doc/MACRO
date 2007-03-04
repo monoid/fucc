@@ -38,7 +38,7 @@ ACTION-DESCRIPTION := (:call FUNCTION)
 
 RULE-EXP       := (CL:* RULE-EXP)
                |  (CL:+ RULE-EXP)
-               |  (:MAYBE RULE-EXP)
+               |  (:MAYBE RULE-EXP+)
                |  (:LIST RULE-EXP RULE-EXP)
                |  (:OR RULE-EXP+)
                |  SYMBOL
@@ -108,9 +108,10 @@ value.  It matches 0 or more repetitions of RULE-EXP.
 Rule expression (CL:+ RULE-EXP) is similar to CL:*, but matches 1 or
 more repetitions of RULE EXP.
 
-(:MAYBE RULE-EXP) defines optional elements.  If RULE-EXP doesn't
+(:MAYBE RULE-EXP+) defines optional elements.  If RULE-EXP doesn't
 match, NIL is returned as semantic value, otherwise semantic value of
-RULE-EXP is used.
+RULE-EXP is used (if there are several RULE-EXPs, list of their
+semantic values is returned).
 
 (:LIST RULE-EXP1 RULE-EXP2) finds non-empty list of RULE-EXP1
 delimited by RULE-EXP2.  Semantic values aof RULE-EXP1 and RULE-EXP2
