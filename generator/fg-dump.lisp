@@ -1,5 +1,5 @@
 #|
- Copyright (c) 2006 Ivan Boldyrev
+ Copyright (c) 2006-2008 Ivan Boldyrev
                                              
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
@@ -38,12 +38,12 @@
                            :initial-element nil))
         (*counter* -1)
         (*action-forms* (make-hash-table :test 'equal))
-        (actions-var (gensym))
-        (array-var (gensym))
-        (result-var (gensym))
-        (i-var (gensym))
-        (j-var (gensym))
-        (redux-var (gensym)))
+        (actions-var (gensym "ACTIONS"))
+        (array-var (gensym "ARRAY"))
+        (result-var (gensym "RESULT"))
+        (i-var (gensym "I"))
+        (j-var (gensym "J"))
+        (redux-var (gensym "REDUX")))
     (dotimes (state (array-dimension action-table 0))
       (dotimes (terminal (array-dimension action-table 1))
         (let ((actions (aref action-table state terminal)))

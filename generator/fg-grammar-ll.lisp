@@ -41,7 +41,7 @@
 (defun expand-form-ll (form rule pos)
   (declare (ignore rule pos))
   (let ((generated-rules '())
-        (generated-sym (gensym)))
+        (generated-sym (gensym "SYM")))
     (ecase (first form)
       ((:or or)
        (dolist (subform (rest form))
@@ -60,7 +60,7 @@
                 `(,generated-sym nil #'list* ,@(rest form) ,generated-sym))
                nil))
       ((:+ +)
-       (let ((generated-sym2 (gensym)))
+       (let ((generated-sym2 (gensym "SYM2")))
         (values generated-sym2
                 (list
                  `(,generated-sym2 nil
@@ -77,7 +77,7 @@
                      `(,generated-sym nil #'identity ,(second form))))
                  nil))
       ((:list list)
-       (let ((generated-sym2 (gensym)))
+       (let ((generated-sym2 (gensym "SYM3")))
         (destructuring-bind (item delim) (rest form)
           (values generated-sym2
                   (list

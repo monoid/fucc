@@ -1,5 +1,5 @@
 #|
- Copyright (c) 2006-2007 Ivan Boldyrev
+ Copyright (c) 2006-2008 Ivan Boldyrev
                                              
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
@@ -42,7 +42,7 @@
 (defun expand-complex-form-lr (form rule pos)
   (declare (ignore rule pos))
   (let ((generated-rules ())
-        (generated-sym1 (gensym)))
+        (generated-sym1 (gensym "SYM1")))
     (ecase (first form)
       ((:* *)
        (push `(,generated-sym1 nil
@@ -105,7 +105,7 @@
 ;;; Inline complex form (like :or).  Returned values are same as of
 ;;; expand-complex-form-lr.
 (defun expand-inlinable-form-lr (form rule pos)
-  (let ((generated-sym1 (gensym)))
+  (let ((generated-sym1 (gensym "SYM1")))
     (ecase (first form)
       ((:or or)
        (let ((short-subforms ()) ; One-element forms are just inlined.
@@ -174,8 +174,8 @@
         (generated-rules)
         (new-rhs '()))
     (loop :for form :in (cdddr rule)
-       :for var := (gensym) :do ; Var is used as lambda arg and as new
-                                ; nterminal
+       :for var := (gensym "NTERM") :do ; Var is used as lambda arg and as new
+                                        ; nterminal
        (push var new-vars)
        :if (attribute-form-p form) :do
        (push var ignore-vars)
@@ -209,7 +209,7 @@
   "Apply TRANSFORMS to ACTION"
   ;; Create new action
   (loop :for tr :in transforms
-     :for arg := (gensym)
+     :for arg := (gensym "ARG")
      :collect arg :into new-arglist
      :collect (if tr
                   `(,tr ,arg)
