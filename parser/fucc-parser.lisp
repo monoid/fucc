@@ -1,5 +1,5 @@
 #|
- Copyright (c) 2006 Ivan Boldyrev
+ Copyright (c) 2006-2008 Ivan Boldyrev
                                              
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
@@ -95,7 +95,7 @@ destructively modified."
                                 (list (first parser))))
         (atom-id)
         (data)
-        (context-info (sixth parser)))
+        (context-info (seventh parser)))
     (let ((lexer-fun (if context-info
                          #'(lambda (state)
                              (funcall lexer (aref context-info state)))
@@ -122,10 +122,47 @@ destructively modified."
                    (if (eq action-type 'reduce-action)
                        (parser-lr--reduce! config action parser atom-id data) ; Reduction
                        ;;  Or error handling
-                       (error 'lr-parse-error-condition
-                              :token-id atom-id
-                              :data data
-                              :config config))
+                       (progn
+                         ;; Try recover error without help.  Find
+                         ;; error-handling state and generate CL:ERROR
+                         ;; token.
+                         (let ((states (lr-config-state-stack config))
+                               (datas  (lr-config-data-stack  config)))
+                           (loop :for sts :on states
+                              :for state := (first sts)
+                              :for action-type := (action-type (next-action state 'cl:error))
+                              :for dats :on datas
+                              :if (eq action-type 'shift-action) :do
+                              ;; Error-handling state found; error
+                              ;; recovery starts.  Unwind stack to the
+                              ;; state.
+                              (setf
+                               (lr-config-state-stack config) sts
+                               (lr-config-data-stack  config) dats)
+                              (process-token 'cl:error nil)
+                              ;; Look for possible sync tokens.  They
+                              ;; are just that can be shifted.
+                              (let ((tokens (cons nil
+                                                  (loop
+                                                     :for at-id :in (sixth parser)
+                                                     :if (member (action-type (get-action config at-id))
+                                                                 '(shift-action))
+                                                     :collect at-id))))
+                                (loop
+                                   ;; Hey, found something!
+                                   (when (member atom-id tokens)
+                                     (if atom-id 
+                                         (process-token atom-id data)
+                                         (error 'lr-parse-error-condition
+                                                :token-id atom-id
+                                                :data data
+                                                :config config))
+                                     (return-from process-token))
+                                   (multiple-value-setq (atom-id data) (funcall lexer-fun nil))))))
+                         (error 'lr-parse-error-condition
+                                :token-id atom-id
+                                :data data
+                                :config config)))
                  ;; Restarts
                  (skip-token ()
                    ;; Get next token

@@ -86,11 +86,12 @@ terminal).  Return list of unused terminals/nterminals."
                   :collect nterminal
                 :else
                   :do (push nterminal unused)))
-    ;; Update terminals, preserving EOF terminal (which is always first)
-    (let ((eof-terminal (first (grammar-terminals grammar))))
+    ;; Update terminals, preserving EOF and ERROR terminals (they are two first)
+    (let ((reserved-terminal (subseq (grammar-terminals grammar)
+                                     0 2)))
       (setf (grammar-terminals grammar)
-            (cons eof-terminal
-                  (loop :for terminal :in (rest (grammar-terminals grammar))
+            (nconc reserved-terminal
+                  (loop :for terminal :in (cddr (grammar-terminals grammar))
                         :if (nterm-used terminal)
                           :collect terminal
                         :else
@@ -114,7 +115,7 @@ terminal).  Return list of unused terminals/nterminals."
 (defun add-nterm (actions)
   (mapcar
    #'(lambda (action)
-       (let ((var (gensym)))
+       (let ((var (gensym "VAR")))
          (destructuring-bind (lmbd (&rest arglist) (funcall rule &rest realargs))
              action
            `(,lmbd ,(cons var arglist)

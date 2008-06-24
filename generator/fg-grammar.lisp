@@ -1,5 +1,5 @@
 #|
- Copyright (c) 2006-2007 Ivan Boldyrev
+ Copyright (c) 2006-2008 Ivan Boldyrev
                                              
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
@@ -75,17 +75,27 @@ environment.  If found, return it; otherwise create new object."
         (setf init-action (second (pop right))))
       (loop :while right :do
          (if (attribute-form-p (second right))
-             ;; Nterm with action
-             (let ((nt (get-nterm (pop right)))
-                   (action (second (pop right))))
-               (push action actions)
-               (push nt right-nterms))
-             ;; Normal nterm
-             (let ((nt (get-nterm (pop right))))
-               (push nil actions)
-               (push nt right-nterms))))
+            ;; Nterm with action
+            (let ((nt (get-nterm (pop right)))
+                  (action (second (pop right))))
+              (push action actions)
+              (push nt right-nterms))
+            ;; Normal nterm
+            (let ((nt (get-nterm (pop right))))
+              (push nil actions)
+              (push nt right-nterms))))
       (setf actions (nreverse actions))
       (setf right-nterms (nreverse right-nterms))
+      ;; Check if rule is well-formed error recovery rule
+      (let* ((where-is-err (member 'cl:error right-nterms))
+             (term-after-err (second where-is-err)))
+        (when where-is-err
+            (if (null (cddr where-is-err))
+                (when (and term-after-err
+                           (not (terminal-p term-after-err)))
+                  (error "After ~S (error recovery designator) should go only a single terminal, but ~S is found." 'cl:error (nterm-name term-after-err)))
+                (error "After ~S (error recovery designator) should go only single terminal, but several are found: ~S." 'cl:error (rest where-is-err)))))
+      
       (let ((rule (apply #'make-rule
                          :left left-nterm
                          :right right-nterms
@@ -187,7 +197,7 @@ environment.  If found, return it; otherwise create new object."
                       "Intarg clause is too short: ~S" form)
               (assert (not (cdddr form)) nil
                       "Init-Env clause is too long: ~S" form)
-              (let ((var (gensym)))
+              (let ((var (gensym "NTERM")))
                 (push (second form)
                       rev-initarg-list)
                 (push var
@@ -195,11 +205,11 @@ environment.  If found, return it; otherwise create new object."
                 (push var var-list)
                 (third form)))
              (t
-              (let ((var (gensym)))
+              (let ((var (gensym "NTERM")))
                 (push var var-list)
                 form))))
           (t
-           (let ((var (gensym)))
+           (let ((var (gensym "NTERM")))
              (push var var-list)
              form))))
      ;; Primary action
@@ -218,7 +228,8 @@ environment.  If found, return it; otherwise create new object."
         '())))))
 
 (defun parse-grammar (initial terminals rules &key prec-info (type :lr))
-  ;; Add EOF mark
+  ;; Add error and EOF marks
+  (push 'cl:error terminals)
   (push +EOF+ terminals)
   ;; Add artifical start rule
   (setf rules
@@ -333,7 +344,7 @@ environment.  If found, return it; otherwise create new object."
 number of argument and doesn't evaluate unused expressions"
   (if (null other-sets)
       set
-      (let ((temp-var (gensym)))
+      (let ((temp-var (gensym "TEMP")))
         `(let ((,temp-var ,set))
           (if (and ,temp-var (null (first ,temp-var)))
               (ounion (rest ,temp-var) (combine-first-sets ,@other-sets)

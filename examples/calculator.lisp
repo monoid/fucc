@@ -13,7 +13,7 @@
 (fucc:defparser *calculator-parser*
     s ; Initial non-terminal
   ;; List of terminal
-  (+ - * / = :semicolon :id :const)
+  (+ - * / = :semicolon :id :const #\( #\))
   ;; List of rules
   ((s ->
       (:var exp-list (:list exp :semicolon))
@@ -33,6 +33,13 @@
                     (funcall op a b)))
         ;; Constants
         -> :const
+        ;; Parenthes
+        -> #\( exp #\) (:call (lambda (ign1 val ign2)
+                                (declare (ignore ign1 ign2))
+                                val))
+        -> #\( error #\) (:call (lambda (&rest ignore)
+                                (declare (ignore ignore))
+                                0))
         ;; and variables
         ->  :id
             (:call (lambda (var)
@@ -57,6 +64,8 @@
          (values next-value (fdefinition next-value)))
         ((symbolp next-value)
          (values :id next-value))
+        ((characterp next-value)
+         (values next-value next-value))
         ((numberp next-value)
          (values :const next-value))
         (t
@@ -70,4 +79,8 @@
 
 (test-calc (copy-list '(a = c = 3 #\;
                         b = 4 #\;
-                        a * a + b * 9 - a)))
+                        a * a + #\( b * 9 #\) - a)))
+;; Error handling:
+(test-calc (copy-list '(a = c = 3 #\;
+                        b = 4 #\;
+                        a * a + #\( b * #\) - a)))

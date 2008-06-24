@@ -1,5 +1,5 @@
 #|
- Copyright (c) 2006-2007 Ivan Boldyrev
+ Copyright (c) 2006-2008 Ivan Boldyrev
                                              
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
@@ -31,14 +31,14 @@
   (let ((grammar (parse-grammar initial terminals rules
                                 :prec-info prec-info
                                 :type type))
-        (%/value/-var (gensym))
-        (mapping-var (gensym))
-        (state-var (gensym))
-        (nterminal-var (gensym))
-        (terminal-var (gensym))
-        (parser-var (gensym))
-        (goto-table-var (gensym))
-        (new-state-var (gensym))
+        (%/value/-var (gensym "VALUE"))
+        (mapping-var (gensym "MAPPING"))
+        (state-var (gensym "STATE"))
+        (nterminal-var (gensym "NTERMINAL"))
+        (terminal-var (gensym "TERMINAL"))
+        (parser-var (gensym "PARSER"))
+        (goto-table-var (gensym "GOTO-TABLE"))
+        (new-state-var (gensym "NEW-STATE"))
         (use-context-p (member :context lexer-options)))
     ;; Check parameters
     (dolist (option (set-difference lexer-options '(:context)))
@@ -142,6 +142,7 @@
                          ,new-state-var))
                    (first ,%/value/-var)
                    (second ,%/value/-var)
+                   ',(mapcar #'nterm-name (rest (grammar-terminals grammar)))
                    ,(if use-context-p
                         (dump-valid-terminals action grammar)
                         nil))))))))))
