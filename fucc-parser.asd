@@ -1,5 +1,5 @@
 #| -*- mode: lisp; -*-
- Copyright (c) 2006 Ivan Boldyrev
+ Copyright (c) 2006-2008 Ivan Boldyrev
                                              
  Permission is hereby granted, free of charge, to any person obtaining
  a copy of this software and associated documentation files (the
@@ -24,7 +24,7 @@
 (asdf:defsystem #:fucc-parser
  :name "LR-parser"
  :author "Ivan Boldyrev"
- :version "0.1.1"
+ :version "0.2.1"
  :components ((:module "parser"
                :components
                ((:file "fucc-package")
