@@ -25,6 +25,8 @@
     :name "LR-generator"
     :author "Ivan Boldyrev"
     :version "0.2.1"
+    :description "Compile-time LL and LR/LALR parser generator"
+    :license "MIT"
     :depends-on ("fucc-parser")
     :components ((:module "generator"
                   :components

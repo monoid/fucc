@@ -22,19 +22,22 @@
 |#
 
 (asdf:defsystem #:fucc-parser
- :name "LR-parser"
- :author "Ivan Boldyrev"
- :version "0.2.1"
- :components ((:module "parser"
-               :components
-               ((:file "fucc-package")
-                (:file "fucc-decl"
-                       :depends-on ("fucc-package"))
-                (:file "fucc-util"
-                       :depends-on ("fucc-package" "fucc-decl"))
-                (:file "fucc-parser"
-                       :depends-on ("fucc-package" "fucc-decl" "fucc-util"))
-                (:file "fucc-ll"
-                       :depends-on ("fucc-package"))))))
+    :name "LR-parser"
+    :author "Ivan Boldyrev"
+    :version "0.2.1"
+    :license "MIT"
+    :description "LL and LR/LALR parser runtime system"
+    :components ((:module "parser"
+                          :components
+                          ((:file "fucc-package")
+                           (:file "fucc-decl"
+                                  :depends-on ("fucc-package"))
+                           (:file "fucc-util"
+                                  :depends-on ("fucc-package" "fucc-decl"))
+                           (:file "fucc-parser"
+                                  :depends-on ("fucc-package" "fucc-decl"
+                                                              "fucc-util"))
+                           (:file "fucc-ll"
+                                  :depends-on ("fucc-package"))))))
 
 ; (asdf:operate 'asdf:load-op :fucc-parser)
