@@ -77,7 +77,7 @@ ORDERING is a reflexive ordering."
           (t
            (let ((new-rest (ocons elt (rest set) :ordering ordering)))
              (if (eq new-rest (rest set))
-                 set ; It may be happen if ELT is already in SET
+                 set ; It may happen if ELT is already in SET
                  (cons (first set) new-rest))))))))
 
 (defun oset-ordering (ordering)
@@ -97,8 +97,12 @@ ORDERING is a reflexive ordering."
                 (pop b))                ; (first a) < (first b)
               (pop a))))))))
 
+;; define-modify-macro requires a symbol for function.
+(defun opush-helper-func (set elt ordering)
+  (ocons elt set :ordering ordering))
+
 (define-modify-macro opush (elt &optional (ordering #'<=))
-  (lambda (set elt ordering) (ocons elt set :ordering ordering))
+  opush-helper-func
   "Insert new element into ordered set.  Note that argument order is
 different from PUSH.")
 
