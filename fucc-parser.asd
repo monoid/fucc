@@ -24,7 +24,7 @@
 (asdf:defsystem #:fucc-parser
     :name "LR-parser"
     :author "Ivan Boldyrev"
-    :version "0.2.1"
+    :version "0.2.2"
     :license "MIT"
     :description "LL and LR/LALR parser runtime system"
     :components ((:module "parser"

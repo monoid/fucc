@@ -24,7 +24,7 @@
 (asdf:defsystem #:fucc-generator
     :name "LR-generator"
     :author "Ivan Boldyrev"
-    :version "0.2.1"
+    :version "0.2.2"
     :description "Compile-time LL and LR/LALR parser generator"
     :license "MIT"
     :depends-on ("fucc-parser")
